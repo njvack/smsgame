@@ -3,8 +3,11 @@
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
+PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
+# FORCE_SCRIPT_NAME = '/smsgame_dev'
+
 ADMINS = (
-    # ('Your Name', 'your_email@example.com'),
+    ('Nate', 'njvack@wisc.edu'),
 )
 
 MANAGERS = ADMINS
@@ -19,6 +22,9 @@ DATABASES = {
         'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
     }
 }
+
+TROPO_SMS_TOKEN = '5237091579554c47ae0fd828a3c951ecc9e7136f833d0d9dd7107124130b9be5e9ef8f8c56fe8b4a9bc7abda'
+TROPO_SESSION_URL = 'https://api.tropo.com/1.0/sessions'
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -52,6 +58,13 @@ MEDIA_ROOT = ''
 # Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
 MEDIA_URL = ''
 
+URL_BASE = FORCE_SCRIPT_NAME
+CSS_PREFIX = '%s/css' % URL_BASE
+JS_PREFIX = '%s/js' % URL_BASE
+IMG_PREFIX = '%s/img' % URL_BASE
+
+PUBLIC_DIR = '%s/public' % PROJECT_DIR
+
 # Absolute path to the directory static files should be collected to.
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
@@ -65,7 +78,7 @@ STATIC_URL = '/static/'
 # URL prefix for admin static files -- CSS, JavaScript and images.
 # Make sure to use a trailing slash.
 # Examples: "http://foo.com/static/admin/", "/static/admin/".
-ADMIN_MEDIA_PREFIX = '/static/admin/'
+ADMIN_MEDIA_PREFIX = '/admin_media/'
 
 # Additional locations of static files
 STATICFILES_DIRS = (
@@ -115,11 +128,18 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'south',
     # Uncomment the next line to enable the admin:
     # 'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
 )
+
+
+import scm_info
+REVISION = scm_info.REVISION
+REPOSITORY_URL = scm_info.REPOSITORY_URL
+
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -128,18 +148,33 @@ INSTALLED_APPS = (
 # more details on how to customize your logging configuration.
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'class': 'django.utils.log.AdminEmailHandler'
-        }
-    },
-    'loggers': {
-        'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
         },
-    }
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+
+    'handlers' : {
+        'logfile' : {
+            'level':'DEBUG',
+            'class':'logging.FileHandler',
+            'filename':'%s/log/debug.log' % PROJECT_DIR,
+        },
+    },
+
+    'loggers' : {
+        'django.request': {
+            'handlers': ['logfile'],
+            'level':'DEBUG',
+        },
+        'smsgame': {
+            'handlers': ['logfile'],
+            'level':'DEBUG',
+            'formatter' : 'simple'
+        },
+    },
 }
