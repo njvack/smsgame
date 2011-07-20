@@ -59,9 +59,9 @@ class Participant(StampedModel):
         return "Participant %s (%s), starts %s" % (
             self.pk, self.phone_number, self.start_date)
 
-        
+
 class Experiment(StampedModel):
-    
+
     EXPERIMENT_STATUSES = (
         ("active", "Active"),
         ("inactive", "Inactive"))
@@ -76,9 +76,9 @@ class Experiment(StampedModel):
 
     game_count = models.IntegerField(
         default=5)
-    
+
     objects = models.Manager()
-    
+
     def __unicode__(self):
         return "Experiment %s (%s): %s days, %s games" % (
             self.pk, self.status, self.day_count, self.game_count)
@@ -99,7 +99,7 @@ class TaskDay(StampedModel):
     is_game_day = models.BooleanField(
         "Play game this day",
         default=False)
-    
+
     def __unicode__(self):
         return "%s (%s-%s)" % (
             self.task_day, self.start_time, self.end_time)
