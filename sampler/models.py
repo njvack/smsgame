@@ -103,3 +103,29 @@ class TaskDay(StampedModel):
     def __unicode__(self):
         return "%s (%s-%s)" % (
             self.task_day, self.start_time, self.end_time)
+
+
+class IncomingTextMessage(StampedModel):
+
+    participant = models.ForeignKey(Participant, blank=True, null=True)
+
+    phone_number = models.CharField(
+        max_length=255)
+
+    message_text = models.CharField(
+        max_length=255)
+
+    tropo_json = models.TextField()
+
+
+class OutgoingTextMessage(StampedModel):
+
+    participant = models.ForeignKey(Participant, blank=True, null=True)
+
+    phone_number = models.CharField(
+        max_length=255)
+
+    message_text = models.CharField(
+        max_length=140)
+
+    tropo_json = models.TextField()
