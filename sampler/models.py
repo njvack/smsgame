@@ -14,17 +14,17 @@ class StampedModel(models.Model):
 
 class Participant(StampedModel):
 
-    experiment = models.ForeignKey('Experiment')
+    experiment = models.ForeignKey("Experiment")
 
     phone_number = models.CharField(
         max_length=255,
         unique=True)
 
     PPT_STATUSES = (
-        ('waiting', 'Waiting to run'),
-        ('baseline', 'Baseline'),
-        ('game', 'Game on!'),
-        ('done', 'All done!'))
+        ("waiting", "Waiting to run"),
+        ("baseline", "Baseline"),
+        ("game", "Game on!"),
+        ("done", "All done!"))
 
     status = models.CharField(
         max_length=20,
@@ -47,12 +47,17 @@ class Participant(StampedModel):
                     participant=self,
                     task_day=self.start_date+tdelta)
                 task.save()
+
+    def __unicode__(self):
+        return "Participant %s (%s), starts %s" % (
+            self.pk, self.phone_number, self.start_date)
+
         
 class Experiment(StampedModel):
     
     EXPERIMENT_STATUSES = (
-        ('active', 'Active'),
-        ('inactive', 'Inactive'))
+        ("active", "Active"),
+        ("inactive", "Inactive"))
 
     status = models.CharField(
         max_length=20,
@@ -74,7 +79,7 @@ class Experiment(StampedModel):
 
 class TaskDay(StampedModel):
 
-    participant = models.ForeignKey('Participant')
+    participant = models.ForeignKey("Participant")
 
     task_day = models.DateField()
 
