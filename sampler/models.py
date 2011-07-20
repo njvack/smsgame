@@ -92,3 +92,7 @@ class TaskDay(StampedModel):
     is_game_day = models.BooleanField(
         "Play game this day",
         default=False)
+    
+    def __unicode__(self):
+        return "%s (%s-%s)" % (
+            self.task_day, self.start_time, self.end_time)
