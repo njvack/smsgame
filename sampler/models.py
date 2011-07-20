@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 
 import datetime
+import random
 
 
 class StampedModel(models.Model):
@@ -47,6 +48,12 @@ class Participant(StampedModel):
                     participant=self,
                     task_day=self.start_date+tdelta)
                 task.save()
+            game_days = random.sample(
+                self.taskday_set.all(), self.experiment.game_count)
+
+            for day in game_days:
+                day.is_game_day = True
+                day.save()
 
     def __unicode__(self):
         return "Participant %s (%s), starts %s" % (
