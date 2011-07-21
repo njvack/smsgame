@@ -58,7 +58,7 @@ class Participant(StampedModel):
 
     def random_game_day_numbers(self):
         return random.sample(
-            range(self.experiment.day_count), 
+            range(self.experiment.day_count),
             self.experiment.game_count)
 
     def save(self, *args, **kwargs):
@@ -88,8 +88,6 @@ class Experiment(StampedModel):
 
     game_count = models.IntegerField(
         default=5)
-
-    objects = models.Manager()
 
     def __unicode__(self):
         return "Experiment %s (%s): %s days, %s games" % (
