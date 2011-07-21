@@ -39,21 +39,33 @@ class Participant(StampedModel):
         null=True,
         editable=False)
 
+    def assign_task_days(self, num):
+        for i in range(num):
+            tdelta = datetime.timedelta(i)
+            task = TaskDay(
+                participant=self,
+                task_day=self.start_date+tdelta)
+            task.save()
+
+    def assign_game_days(self, day_numbers):
+        # First, clear the existing days...
+        self.taskday_set.update(is_game_day=False)
+        task_days = self.taskday_set.all()
+        for dnum in day_numbers:
+            task_day = task_days[dnum]
+            task_day.is_game_day = True
+            task_day.save()
+
+    def random_game_day_numbers(self):
+        return random.sample(
+            range(self.experiment.day_count), 
+            self.experiment.game_count)
+
     def save(self, *args, **kwargs):
         super(Participant, self).save(*args, **kwargs)
         if self.taskday_set.count() == 0:
-            for daynum in range(self.experiment.day_count):
-                tdelta = datetime.timedelta(daynum)
-                task = TaskDay(
-                    participant=self,
-                    task_day=self.start_date+tdelta)
-                task.save()
-            game_days = random.sample(
-                self.taskday_set.all(), self.experiment.game_count)
-
-            for day in game_days:
-                day.is_game_day = True
-                day.save()
+            self.assign_task_days(self.experiment.day_count)
+            self.assign_game_days(self.random_game_day_numbers())
 
     def __unicode__(self):
         return "Participant %s (%s), starts %s" % (
