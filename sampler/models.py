@@ -74,15 +74,6 @@ class Participant(StampedModel):
 
 class Experiment(StampedModel):
 
-    EXPERIMENT_STATUSES = (
-        ("active", "Active"),
-        ("inactive", "Inactive"))
-
-    status = models.CharField(
-        max_length=20,
-        choices=EXPERIMENT_STATUSES,
-        default=EXPERIMENT_STATUSES[0])
-
     day_count = models.IntegerField(
         default=7)
 
@@ -90,8 +81,8 @@ class Experiment(StampedModel):
         default=5)
 
     def __unicode__(self):
-        return "Experiment %s (%s): %s days, %s games" % (
-            self.pk, self.status, self.day_count, self.game_count)
+        return "Experiment %s: %s days, %s games" % (
+            self.pk, self.day_count, self.game_count)
 
 
 class TaskDay(StampedModel):
