@@ -61,12 +61,6 @@ class Participant(StampedModel):
             range(self.experiment.day_count),
             self.experiment.game_count)
 
-    def save(self, *args, **kwargs):
-        super(Participant, self).save(*args, **kwargs)
-        if self.taskday_set.count() == 0:
-            self.assign_task_days(self.experiment.day_count)
-            self.assign_game_days(self.random_game_day_numbers())
-
     def __unicode__(self):
         return "Participant %s (%s), starts %s" % (
             self.pk, self.phone_number, self.start_date)
