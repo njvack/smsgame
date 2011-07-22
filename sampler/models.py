@@ -8,6 +8,8 @@ import re
 
 class PhoneNumber(object):
 
+    description = "A 10-digit US telephone number"
+
     def __init__(self, number_string):
         self.original_string = number_string
         ns = re.sub("\D", "", number_string)
@@ -30,8 +32,25 @@ class PhoneNumber(object):
         n = self.cleaned
         return "(%s) %s-%s" % (n[0:3], n[3:6], n[6:])
 
+    def __len__(self):
+        return len(self.cleaned)
+
     def __str__(self):
         return self.__unicode__()
+
+
+class PhoneNumberField(models.CharField):
+    
+    __metaclass__ = models.SubfieldBase
+
+    def to_python(self, value):
+        if isinstance(value, PhoneNumber):
+            return value
+
+        return PhoneNumber(str(value))
+
+    def get_prep_value(self, value):
+        return value.cleaned
 
 
 class StampedModel(models.Model):
@@ -46,7 +65,7 @@ class Participant(StampedModel):
 
     experiment = models.ForeignKey("Experiment")
 
-    phone_number = models.CharField(
+    phone_number = PhoneNumberField(
         max_length=255,
         unique=True)
 
@@ -91,7 +110,7 @@ class Participant(StampedModel):
             self.experiment.game_count)
 
     def __unicode__(self):
-        return "Participant %s (%s), starts %s" % (
+        return "Participant %s: %s, starts %s" % (
             self.pk, self.phone_number, self.start_date)
 
 
@@ -133,7 +152,7 @@ class IncomingTextMessage(StampedModel):
 
     participant = models.ForeignKey(Participant, blank=True, null=True)
 
-    phone_number = models.CharField(
+    phone_number = models.PhoneNumberField(
         max_length=255)
 
     message_text = models.CharField(
@@ -146,7 +165,7 @@ class OutgoingTextMessage(StampedModel):
 
     participant = models.ForeignKey(Participant, blank=True, null=True)
 
-    phone_number = models.CharField(
+    phone_number = models.PhoneNumberField(
         max_length=255)
 
     message_text = models.CharField(
