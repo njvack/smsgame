@@ -40,7 +40,7 @@ class PhoneNumber(object):
 
 
 class PhoneNumberField(models.CharField):
-    
+
     __metaclass__ = models.SubfieldBase
 
     def to_python(self, value):
@@ -51,6 +51,9 @@ class PhoneNumberField(models.CharField):
 
     def get_prep_value(self, value):
         return value.cleaned
+
+from south.modelsinspector import add_introspection_rules
+add_introspection_rules([], ["^sampler\.models\.PhoneNumberField"])
 
 
 class StampedModel(models.Model):
@@ -150,9 +153,12 @@ class TaskDay(StampedModel):
 
 class IncomingTextMessage(StampedModel):
 
-    participant = models.ForeignKey(Participant, blank=True, null=True)
+    participant = models.ForeignKey(
+        Participant,
+        blank=True,
+        null=True)
 
-    phone_number = models.PhoneNumberField(
+    phone_number = PhoneNumberField(
         max_length=255)
 
     message_text = models.CharField(
@@ -163,9 +169,12 @@ class IncomingTextMessage(StampedModel):
 
 class OutgoingTextMessage(StampedModel):
 
-    participant = models.ForeignKey(Participant, blank=True, null=True)
+    participant = models.ForeignKey(
+        Participant,
+        blank=True,
+        null=True)
 
-    phone_number = models.PhoneNumberField(
+    phone_number = PhoneNumberField(
         max_length=255)
 
     message_text = models.CharField(
