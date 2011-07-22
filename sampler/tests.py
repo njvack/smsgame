@@ -7,11 +7,54 @@ Replace this with more appropriate tests for your application.
 
 from django.test import TestCase
 from . import models
+import random
+import datetime
 
+class ParticipantTest(TestCase):
+    def setUp(self):
+        random.seed(0)
+        self.today = datetime.date(2011, 7, 1) # Not really today.
+        self.exp = models.Experiment.objects.create(task_days=7, game_days=5)
+        self.p1 = models.Participant.objects.create(
+            experiment=exp, start_date=self.today)
 
-class SimpleTest(TestCase):
-    def test_basic_addition(self):
-        """
-        Tests that 1 + 1 always equals 2.
-        """
-        self.assertEqual(1 + 1, 2)
+class PhoneNumberTest(TestCase):
+    
+    def testCreation(self):
+        num = "6085551212"
+        ph = models.PhoneNumber(num)
+        self.assertEqual(num, ph.cleaned)
+    
+    def testStripNonNumeric(self):
+        num = " 608555asjdha!dna1#}(212 "
+        cleaned = "6085551212"
+        ph = models.PhoneNumber(num)
+        self.assertEqual(cleaned, ph.cleaned)
+    
+    def testStripLeadingOne(self):
+        num = " 16085551212"
+        cleaned = "6085551212"
+        ph = models.PhoneNumber(num)
+        self.assertEqual(cleaned, ph.cleaned)
+    
+    def testSaveOriginalString(self):
+        num = "6085551212sldfkdsfj"
+        ph = models.PhoneNumber(num)
+        self.assertEqual(num, ph.original_string)
+    
+    def testDontFormatOddLengths(self):
+        num = "55512"
+        ph = models.PhoneNumber(num)
+        self.assertEqual(num, str(ph))
+    
+    def testDoSevenDigitFormatting(self):
+        num = "5551212"
+        formatted = "555-1212"
+        ph = models.PhoneNumber(num)
+        self.assertEqual(formatted, str(ph))
+    
+    def testDoTenDigitFormatting(self):
+        num = "6085551212"
+        formatted = "(608) 555-1212"
+        ph = models.PhoneNumber(num)
+        self.assertEqual(formatted, str(ph))

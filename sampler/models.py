@@ -3,6 +3,35 @@ from django.conf import settings
 
 import datetime
 import random
+import re
+
+
+class PhoneNumber(object):
+
+    def __init__(self, number_string):
+        self.original_string = number_string
+        ns = re.sub("\D", "", number_string)
+        ns = re.sub("^1", "", ns)
+        self.cleaned = ns
+
+    def __unicode__(self):
+        n = self.cleaned
+        if len(n) == 7:
+            return self.seven_digit()
+        if len(n) == 10:
+            return self.ten_digit()
+        return n
+
+    def seven_digit(self):
+        n = self.cleaned
+        return "%s-%s" % (n[0:3], n[3:])
+
+    def ten_digit(self):
+        n = self.cleaned
+        return "(%s) %s-%s" % (n[0:3], n[3:6], n[6:])
+
+    def __str__(self):
+        return self.__unicode__()
 
 
 class StampedModel(models.Model):
