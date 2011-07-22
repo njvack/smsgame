@@ -120,10 +120,49 @@ class Participant(StampedModel):
 class Experiment(StampedModel):
 
     day_count = models.IntegerField(
+        "Total task days",
         default=7)
 
     game_count = models.IntegerField(
         default=5)
+
+    max_messages_per_day = models.IntegerField(
+        default=35)
+
+    min_time_between_samples = models.IntegerField(
+        help_text="(Minutes)",
+        default=60)
+
+    max_time_between_samples = models.IntegerField(
+        help_text="(Minutes)",
+        default=90)
+
+    response_window = models.IntegerField(
+        help_text="(Seconds)",
+        default=420) # 7 minutes
+
+    game_value = models.DecimalField(
+        help_text="(Dollars)",
+        default=20.00,
+        max_digits=5,
+        decimal_places=2)
+
+    participation_value = models.DecimalField(
+        help_text="(Dollars)",
+        default=25.00,
+        max_digits=5,
+        decimal_places=2)
+
+    bonus_value = models.DecimalField(
+        help_text="(Dollars)",
+        default=40.00,
+        max_digits=5,
+        decimal_places=2)
+
+    min_pct_answered_for_bonus = models.IntegerField(
+        "Bonus percent",
+        help_text="Minimum percent of texts answered for bonus",
+        default=90)
 
     def __unicode__(self):
         return "Experiment %s: %s days, %s games" % (
