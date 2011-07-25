@@ -179,10 +179,16 @@ class TaskDay(StampedModel):
     task_day = models.DateField()
 
     start_time = models.TimeField(
-        default="8:00")
+        default=datetime.time(8, 00))
 
     end_time = models.TimeField(
-        default="22:00")
+        default=datetime.time(22, 00))
+
+    earliest_contact = models.DateTimeField(
+        editable=False)
+
+    latest_contact = models.DateTimeField(
+        editable=False)
 
     is_game_day = models.BooleanField(
         "Play game this day",

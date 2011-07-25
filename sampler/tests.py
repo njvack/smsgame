@@ -76,3 +76,13 @@ class TaskDayTest(TestCase):
         td1 = self.p1.taskday_set.create(task_day=self.today)
         with self.assertRaises(IntegrityError):
             td2 = self.p1.taskday_set.create(task_day=self.today)
+
+    def testEarliestLatestContactsSave(self):
+        early = datetime.datetime(2011, 7, 1, 8, 30)
+        late = datetime.datetime(2011, 7, 1, 20, 00)
+        td1 = self.p1.taskday_set.create(
+            task_day=early.date(),
+            start_time=early.time(),
+            end_time=late.time())
+        self.assertEqual(td1.earliest_contact, early)
+        self.assertEqual(td1.latest_contact, late)
