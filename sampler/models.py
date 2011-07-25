@@ -171,6 +171,9 @@ class Experiment(StampedModel):
 
 class TaskDay(StampedModel):
 
+    class Meta:
+        unique_together = ('participant', 'task_day')
+
     participant = models.ForeignKey("Participant")
 
     task_day = models.DateField()
