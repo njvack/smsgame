@@ -17,9 +17,20 @@ class ParticipantTest(TestCase):
     def setUp(self):
         random.seed(0)
         self.today = datetime.date(2011, 7, 1) # Not really today.
-        self.exp = models.Experiment.objects.create(task_days=7, game_days=5)
+        self.exp = models.Experiment.objects.create()
         self.p1 = models.Participant.objects.create(
-            experiment=exp, start_date=self.today)
+            experiment=self.exp, start_date=self.today)
+
+    def testPptWakesUpOnTaskDay(self):
+        p1 = self.p1
+        p1.status = "waiting"
+        p1.save()
+        now = datetime.datetime(1,1,1,8,30)
+        td = td1 = p1.taskday_set.create(
+            task_day=self.today,
+            start_time = now.time())
+        p1.wake_up(td)
+        self.assertEqual(p1.status, "baseline")
 
 
 class PhoneNumberTest(TestCase):

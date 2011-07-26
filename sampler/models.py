@@ -112,6 +112,15 @@ class Participant(StampedModel):
             range(self.experiment.day_count),
             self.experiment.game_count)
 
+    def wake_up(self, task_day, skip_save=False):
+        self.status = "baseline"
+        delta = datetime.timedelta(minutes=random.randint(
+            1, self.experiment.min_time_between_samples))
+        start_time = task_day.earliest_contact
+        self.next_contact_time = start_time + delta
+        if not skip_save:
+            self.save()
+
     def __unicode__(self):
         return "Participant %s: %s, starts %s" % (
             self.pk, self.phone_number, self.start_date)
@@ -197,6 +206,18 @@ class TaskDay(StampedModel):
     def __unicode__(self):
         return "%s (%s-%s)" % (
             self.task_day, self.start_time, self.end_time)
+
+    def save(self, *args, **kwargs):
+
+        self.earliest_contact = datetime.datetime(
+            self.task_day.year, self.task_day.month, self.task_day.day,
+            self.start_time.hour, self.start_time.minute)
+
+        self.latest_contact = datetime.datetime(
+            self.task_day.year, self.task_day.month, self.task_day.day,
+            self.end_time.hour, self.end_time.minute)
+
+        super(TaskDay, self).save(*args, **kwargs)
 
 
 class IncomingTextMessage(StampedModel):
