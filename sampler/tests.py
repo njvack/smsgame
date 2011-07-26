@@ -25,12 +25,22 @@ class ParticipantTest(TestCase):
         p1 = self.p1
         p1.status = "waiting"
         p1.save()
-        now = datetime.datetime(1,1,1,8,30)
+        now = datetime.datetime(1, 1, 1, 8, 30)
         td = td1 = p1.taskday_set.create(
             task_day=self.today,
             start_time = now.time())
         p1.wake_up(td)
         self.assertEqual(p1.status, "baseline")
+
+    def testSetPrelimContactTime(self):
+        p1 = self.p1
+        now = datetime.datetime(2011, 7, 1, 10, 30)
+        self.assertIsNone(p1.next_contact_time)
+        p1.set_preliminary_next_contact_time(now)
+        self.assertLess(now, p1.next_contact_time) # Test ordering
+        t1 = p1.next_contact_time
+        p1.set_preliminary_next_contact_time(now)
+        self.assertNotEqual(t1, p1.next_contact_time) # Test randomization
 
 
 class PhoneNumberTest(TestCase):

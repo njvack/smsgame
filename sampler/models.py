@@ -121,6 +121,14 @@ class Participant(StampedModel):
         if not skip_save:
             self.save()
 
+    def set_preliminary_next_contact_time(self, current_time, skip_save=False):
+        delta = datetime.timedelta(minutes=random.randint(
+            self.experiment.min_time_between_samples,
+            self.experiment.max_time_between_samples))
+        self.next_contact_time = current_time + delta
+        if not skip_save:
+            self.save()
+
     def __unicode__(self):
         return "Participant %s: %s, starts %s" % (
             self.pk, self.phone_number, self.start_date)
