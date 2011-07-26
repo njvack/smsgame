@@ -178,6 +178,43 @@ class Experiment(StampedModel):
             self.pk, self.day_count, self.game_count)
 
 
+class ExperienceSample(StampedModel):
+
+    task_day = models.ForeignKey(
+        "TaskDay",
+        editable=False)
+
+    outgoing_text = models.ForeignKey(
+        "OutgoingTextMessage",
+        null=True,
+        blank=True,
+        editable=False)
+
+    incoming_text = models.ForeignKey(
+        "IncomingTextMessage",
+        null=True,
+        blank=True,
+        editable=False)
+
+    scheduled_at = models.DateTimeField()
+
+    sent_at = models.DateTimeField(
+        null=True,
+        blank=True)
+
+    answered_at = models.DateTimeField(
+        null=True,
+        blank=True)
+
+    positive_emotion = models.IntegerField(
+        null=True,
+        blank=True)
+
+    negative_emotion = models.IntegerField(
+        null=True,
+        blank=True)
+
+
 class TaskDay(StampedModel):
 
     class Meta:
