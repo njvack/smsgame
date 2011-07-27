@@ -35,6 +35,12 @@ class ParticipantTest(TestCase):
         p1.set_preliminary_next_contact_time(now)
         self.assertNotEqual(t1, p1.next_contact_time) # Test randomization
 
+    def testPptDoesntAllowCrazyStatus(self):
+        p1 = self.p1
+        p1.status = "crazy"
+        with self.assertRaises(ValidationError):
+            p1.save()
+
 
 class PhoneNumberTest(TestCase):
 
