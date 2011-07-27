@@ -74,11 +74,7 @@ class Participant(StampedModel):
         max_length=255,
         unique=True)
 
-    STATUSES = (
-          "waiting"
-        , "baseline"
-        , "game"
-        , "done")
+    STATUSES = ("waiting", "baseline", "game", "done")
 
     status = models.CharField(
         max_length=20,
@@ -136,7 +132,7 @@ class Participant(StampedModel):
             self.pk, self.phone_number, self.start_date)
 
     def save(self, *args, **kwargs):
-        self.full_clean()
+        self.clean_fields()
         super(Participant, self).save(*args, **kwargs)
 
 
@@ -234,6 +230,13 @@ class TaskDay(StampedModel):
     class Meta:
         unique_together = ('participant', 'task_day')
 
+    STATUSES = ('waiting', 'active', 'complete')
+
+    status = models.CharField(
+        max_length=255,
+        default=STATUSES[0],
+        validators=[validators.IncludesValidator(STATUSES)])
+
     participant = models.ForeignKey("Participant")
 
     task_day = models.DateField()
@@ -258,8 +261,19 @@ class TaskDay(StampedModel):
         return "%s (%s-%s)" % (
             self.task_day, self.start_time, self.end_time)
 
-    def save(self, *args, **kwargs):
+    def set_status_for_time(self, dt, skip_save=False):
+        self.__set_contact_fields()
+        if dt < self.earliest_contact:
+            self.status = 'waiting'
+        elif dt >= self.earliest_contact and dt < self.latest_contact:
+            self.status = 'active'
+        else:
+            self.status = 'complete'
 
+        if not skip_save:
+            self.save()
+
+    def __set_contact_fields(self):
         self.earliest_contact = datetime.datetime(
             self.task_day.year, self.task_day.month, self.task_day.day,
             self.start_time.hour, self.start_time.minute)
@@ -268,6 +282,9 @@ class TaskDay(StampedModel):
             self.task_day.year, self.task_day.month, self.task_day.day,
             self.end_time.hour, self.end_time.minute)
 
+    def save(self, *args, **kwargs):
+        self.clean_fields()
+        self.__set_contact_fields()
         super(TaskDay, self).save(*args, **kwargs)
 
 

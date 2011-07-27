@@ -91,21 +91,36 @@ class TaskDayTest(TestCase):
         self.exp = models.Experiment.objects.create()
         self.p1 = models.Participant.objects.create(
             experiment=self.exp, start_date=self.today)
+        self.early = datetime.datetime(2011, 7, 1, 8, 30)
+        self.td_start = datetime.datetime(2011, 7, 1, 9, 30)
+        self.td_end = datetime.datetime(2011, 7, 1, 19, 00)
+        self.late = datetime.datetime(2011, 7, 1, 20, 00)
+        self.td1 = self.p1.taskday_set.create(
+            task_day=self.td_start.date(),
+            start_time=self.td_start.time(),
+            end_time=self.td_end.time())
 
     def testCantCreateTaskDayTwice(self):
-        td1 = self.p1.taskday_set.create(task_day=self.today)
         with self.assertRaises(IntegrityError):
             td2 = self.p1.taskday_set.create(task_day=self.today)
 
     def testEarliestLatestContactsSave(self):
-        early = datetime.datetime(2011, 7, 1, 8, 30)
-        late = datetime.datetime(2011, 7, 1, 20, 00)
-        td1 = self.p1.taskday_set.create(
-            task_day=early.date(),
-            start_time=early.time(),
-            end_time=late.time())
-        self.assertEqual(td1.earliest_contact, early)
-        self.assertEqual(td1.latest_contact, late)
+        self.assertEqual(self.td1.earliest_contact, self.td_start)
+        self.assertEqual(self.td1.latest_contact, self.td_end)
+
+    def testValidatesStatus(self):
+        with self.assertRaises(ValidationError):
+            self.td1.status = "sillier"
+            self.td1.save()
+
+    def testStatusForTimeGetsSetProperly(self):
+        self.assertEqual('waiting', self.td1.status)
+        self.td1.set_status_for_time(self.early)
+        self.assertEqual('waiting', self.td1.status)
+        self.td1.set_status_for_time(self.td_start)
+        self.assertEqual('active', self.td1.status)
+        self.td1.set_status_for_time(self.td_end)
+        self.assertEqual('complete', self.td1.status)
 
 
 class IncludesValidatorTest(TestCase):
