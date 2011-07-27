@@ -29,12 +29,18 @@ class ParticipantTest(TestCase):
         p1 = self.p1
         p1.status = "waiting"
         p1.save()
-        now = datetime.datetime(1,1,1,8,30)
+        now = datetime.datetime(1, 1, 1, 8, 30)
         td = td1 = p1.taskday_set.create(
             task_day=self.today,
             start_time = now.time())
         p1.wake_up(td)
         self.assertEqual(p1.status, "baseline")
+
+    def testPptDoesntAllowCrazyStatus(self):
+        p1 = self.p1
+        p1.status = "crazy"
+        with self.assertRaises(ValidationError):
+            p1.save()
 
 
 class PhoneNumberTest(TestCase):

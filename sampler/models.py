@@ -5,6 +5,8 @@ import datetime
 import random
 import re
 
+from . import validators
+
 
 class PhoneNumber(object):
 
@@ -72,16 +74,16 @@ class Participant(StampedModel):
         max_length=255,
         unique=True)
 
-    PPT_STATUSES = (
-        ("waiting", "Waiting to run"),
-        ("baseline", "Baseline"),
-        ("game", "Game on!"),
-        ("done", "All done!"))
+    STATUSES = (
+          "waiting"
+        , "baseline"
+        , "game"
+        , "done")
 
     status = models.CharField(
         max_length=20,
-        choices=PPT_STATUSES,
-        default=PPT_STATUSES[0])
+        default=STATUSES[0],
+        validators=[validators.IncludesValidator(STATUSES)])
 
     start_date = models.DateField()
 
@@ -124,6 +126,10 @@ class Participant(StampedModel):
     def __unicode__(self):
         return "Participant %s: %s, starts %s" % (
             self.pk, self.phone_number, self.start_date)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super(Participant, self).save(*args, **kwargs)
 
 
 class Experiment(StampedModel):
