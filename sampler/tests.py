@@ -123,6 +123,21 @@ class TaskDayTest(TestCase):
         self.assertEqual('complete', self.td1.status)
 
 
+class IncomingTropoSessionTest(TestCase):
+
+    def setUp(self):
+        self.json_str = '{"session":{"id":"5aa1039bb972f8f8e9d5beaf5cc70262","accountId":"62371","timestamp":"2011-07-27T21:31:21.724Z","userType":"NONE","initialText":null,"callId":null,"parameters":{"model":"Participant","query_type":"model_trigger","pk":"1","action":"test","format":"json"}}}'
+        self.sess = models.IncomingTropoSession(self.json_str)
+
+    def testKeysIncludeId(self):
+        self.assertTrue('id' in self.sess)
+
+    def testItemAccess(self):
+        self.assertEqual('5aa1039bb972f8f8e9d5beaf5cc70262', self.sess['id'])
+        self.assertEqual('5aa1039bb972f8f8e9d5beaf5cc70262', self.sess.get('id'))
+        self.assertIsNone(self.sess['zzzzzzz'])
+
+
 class IncludesValidatorTest(TestCase):
 
     def setUp(self):
