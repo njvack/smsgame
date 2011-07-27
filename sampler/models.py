@@ -2,10 +2,15 @@ from django.db import models
 from django.conf import settings
 
 import datetime
+import json
 import random
 import re
+import urllib2
 
 from . import validators
+
+import logging
+logger = logging.getLogger("smsgame")
 
 
 class PhoneNumber(object):
@@ -350,3 +355,41 @@ class IncomingTropoSession(object):
 
     def keys(self):
         return self.session_data.keys()
+
+
+class OutgoingTropoSession(object):
+
+    def __init__(
+        self,
+        url=settings.TROPO_SESSION_URL,
+        sms_token=settings.TROPO_SMS_TOKEN):
+
+        self.url = url
+        self.sms_token = sms_token
+
+    def trigger_model_action(self, model, action):
+        model_name = model.__class__.__name__
+        opts = {
+            'query_type': 'model_trigger',
+            'model': model_name,
+            'pk': model.pk,
+            'action': action}
+        self.request_session(opts)
+
+    def request_session(self, options):
+        my_opts = {}
+        my_opts.update(dict(options))
+        my_opts.update({'token': self.sms_token})
+        for k, v in my_opts.iteritems():
+            my_opts[k] = str(v)
+        opts_json = json.dumps(dict(my_opts))
+        req = urllib2.Request(self.url,
+            opts_json, {'content-type': 'application/json'})
+        stream = urllib2.urlopen(req)
+        response = stream.read()
+        stream.close()
+        resp_dict = json.loads(response)
+        if 'id' in resp_dict:
+            resp_dict['id'] = resp_dict['id'].strip()
+
+        return resp_dict
