@@ -7,9 +7,13 @@ Replace this with more appropriate tests for your application.
 
 from django.test import TestCase
 from django.db import IntegrityError
-from . import models
+from django.core.exceptions import ValidationError
+
 import random
 import datetime
+
+from . import models
+from . import validators
 
 
 class ParticipantTest(TestCase):
@@ -97,3 +101,19 @@ class TaskDayTest(TestCase):
             end_time=late.time())
         self.assertEqual(td1.earliest_contact, early)
         self.assertEqual(td1.latest_contact, late)
+
+
+class IncludesValidatorTest(TestCase):
+
+    def setUp(self):
+        self.iv = validators.IncludesValidator(('foo', 'bar'))
+
+    def testIVReturnsCallable(self):
+        self.assertTrue(hasattr(self.iv, '__call__'))
+
+    def testIVRaisesForFail(self):
+        with self.assertRaises(ValidationError):
+            self.iv('baz')
+
+    def testIVDoesNotRaiseForSuccess(self):
+        self.assertIsNone(self.iv('foo'))
