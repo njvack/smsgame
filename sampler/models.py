@@ -40,6 +40,12 @@ class PhoneNumber(object):
     def __str__(self):
         return self.__unicode__()
 
+    def __repr__(self):
+        return "%s.%s('%s')" % (
+            self.__class__.__module__,
+            self.__class__.__name__,
+            str(self))
+
 
 class PhoneNumberField(models.CharField):
 
