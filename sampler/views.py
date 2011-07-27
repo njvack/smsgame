@@ -5,10 +5,13 @@ from tropo import Tropo
 import logging
 logger = logging.getLogger("smsgame")
 
-def tropo(request):
-    logger.debug(request.raw_post_data)
+from . import models
 
+def tropo(request):
+    s = models.IncomingTropoSession(request.raw_post_data)
+    ppt = models.Participant.objects.get(pk=s['parameters']['pk'])
     t = Tropo()
+    t.call("1"+str(ppt.phone_number), channel='TEXT')
     t.say("OK, got it.")
     t.hangup()
     response = HttpResponse(content_type='application/json')
