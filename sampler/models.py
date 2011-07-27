@@ -74,7 +74,7 @@ class Participant(StampedModel):
         max_length=255,
         unique=True)
 
-    STATUSES = ("waiting", "baseline", "game", "done")
+    STATUSES = ('baseline', 'game', 'complete')
 
     status = models.CharField(
         max_length=20,
