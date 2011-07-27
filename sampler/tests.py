@@ -21,17 +21,6 @@ class ParticipantTest(TestCase):
         self.p1 = models.Participant.objects.create(
             experiment=self.exp, start_date=self.today)
 
-    def testPptWakesUpOnTaskDay(self):
-        p1 = self.p1
-        p1.status = "waiting"
-        p1.save()
-        now = datetime.datetime(1, 1, 1, 8, 30)
-        td = td1 = p1.taskday_set.create(
-            task_day=self.today,
-            start_time = now.time())
-        p1.wake_up(td)
-        self.assertEqual(p1.status, "baseline")
-
     def testSetPrelimContactTime(self):
         p1 = self.p1
         now = datetime.datetime(2011, 7, 1, 10, 30)
