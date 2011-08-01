@@ -326,7 +326,7 @@ class IncomingTextMessage(StampedModel):
         max_length=255)
 
     message_text = models.CharField(
-        max_length=255)
+        max_length=160)
 
     tropo_json = models.TextField()
 
@@ -342,7 +342,7 @@ class OutgoingTextMessage(StampedModel):
         max_length=255)
 
     message_text = models.CharField(
-        max_length=140)
+        max_length=160)
 
     tropo_json = models.TextField()
 
