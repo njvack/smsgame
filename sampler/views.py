@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.urlresolvers import resolve
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 
 import json
 import logging
@@ -34,6 +35,17 @@ def incoming_message(request):
     response.write(t.RenderJson())
     return response
 
+
+def request_baseline(request):
+    pk = request.REQUEST['pk']
+    ppt = get_object_or_404(models.Participant, pk=pk)
+    t = Tropo()
+    t.call(ppt.phone_number.for_tropo, channel="TEXT")
+    t.say("Enter how much positive emotion (1-9) and negative emotion (1-9) you are feeling right now.")
+    t.hangup()
+    response = HttpResponse(content_type='applicaion/json')
+    response.write(t.RenderJson())
+    return response
 
 class TropoRequest(object):
     """
