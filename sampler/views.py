@@ -1,5 +1,6 @@
-from django.http import HttpResponse
 from django.conf import settings
+from django.core.urlresolvers import resolve
+from django.http import HttpResponse
 
 import json
 import logging
@@ -11,16 +12,24 @@ from . import models
 
 
 def tropo(request):
-    # This method will take a tropo request and
+    # This method will take an HttpRequest from Tropo, create a TropoRequest
+    # object, and then route it using resolve()
 
     logger.debug("Tropo request: "+request.raw_post_data)
-    treq
-    #s = models.IncomingTropoSession(request.raw_post_data)
-    #ppt = models.Participant.objects.get(pk=s['parameters']['pk'])
+    treq = TropoRequest(request.raw_post_data)
+    logger.debug(treq.method)
+    logger.debug(treq.path)
+    logger.debug(treq.REQUEST)
+
+    resolved = resolve(treq.path)
+    logger.debug(resolved)
+    logger.debug(resolved.func)
+    return resolved.func(treq, *resolved.args, **resolved.kwargs)
+
+
+def incoming_message(request):
     t = Tropo()
-    #t.call("1"+str(ppt.phone_number), channel='TEXT')
-    t.say("OK, got it.")
-    t.hangup()
+    t.say("This was for an incoming message.")
     response = HttpResponse(content_type='application/json')
     response.write(t.RenderJson())
     return response
