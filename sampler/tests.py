@@ -27,16 +27,6 @@ class ParticipantTest(TestCase):
         self.p1 = models.Participant.objects.create(
             experiment=self.exp, start_date=self.today)
 
-    def testSetPrelimContactTime(self):
-        p1 = self.p1
-        now = datetime.datetime(2011, 7, 1, 10, 30)
-        self.assertIsNone(p1.next_contact_time)
-        p1.set_preliminary_next_contact_time(now)
-        self.assertLess(now, p1.next_contact_time) # Test ordering
-        t1 = p1.next_contact_time
-        p1.set_preliminary_next_contact_time(now)
-        self.assertNotEqual(t1, p1.next_contact_time) # Test randomization
-
     def testPptDoesntAllowCrazyStatus(self):
         p1 = self.p1
         p1.status = "crazy"
