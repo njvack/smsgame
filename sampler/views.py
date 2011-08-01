@@ -1,19 +1,81 @@
 from django.http import HttpResponse
+from django.conf import settings
 
-from tropo import Tropo
-
+import json
 import logging
 logger = logging.getLogger("smsgame")
 
+from tropo import Tropo
+
 from . import models
 
+
 def tropo(request):
-    s = models.IncomingTropoSession(request.raw_post_data)
-    ppt = models.Participant.objects.get(pk=s['parameters']['pk'])
+    # This method will take a tropo request and
+
+    logger.debug("Tropo request: "+request.raw_post_data)
+    treq
+    #s = models.IncomingTropoSession(request.raw_post_data)
+    #ppt = models.Participant.objects.get(pk=s['parameters']['pk'])
     t = Tropo()
-    t.call("1"+str(ppt.phone_number), channel='TEXT')
+    #t.call("1"+str(ppt.phone_number), channel='TEXT')
     t.say("OK, got it.")
     t.hangup()
     response = HttpResponse(content_type='application/json')
     response.write(t.RenderJson())
     return response
+
+
+class TropoRequest(object):
+    """
+    This class causes an incoming Tropo request to simulate an HttpRequest
+    closely enough to be used in standard view functions.
+    request.method will be POST for session responses, TEXT for incoming
+    texts, and VOICE for incoming voice calls.
+
+    The parameters will be available in request.REQUEST, and the full
+    parsed request will be in request.data. The full, unparsed data will
+    be in request.raw_data.
+
+    A path should be available in request.path and request.path_info.
+    In the case of session responses, it's found in:
+    request.REQUEST[settings.TROPO_PATH_PARAM]
+    In the case of incoming text/voice data, it's:
+    settings.TROPO_INCOMING_TEXT_PATH
+    """
+
+    def __init__(self, raw_data):
+        self.raw_data = raw_data
+        self.data = json.loads(raw_data)
+        self._s = self.data.get("session") or {}
+        self.__set_method()
+        self.__set_parameters()
+        self.__set_path()
+        self.__set_to_from()
+
+    def __set_method(self):
+        self.method = "POST"
+        to = self._s.get("to")
+        if to and to.get("channel"):
+            self.method = to.get("channel")
+
+    def __set_parameters(self):
+        self.REQUEST = self._s.get("parameters") or {}
+
+    def __set_path(self):
+        if self.method == "POST":
+            self.path = self.REQUEST.get(settings.TROPO_PATH_PARAM)
+        elif self.method == "TEXT":
+            self.path = settings.TROPO_INCOMING_TEXT_PATH
+        self.path_info = self.path
+
+    def __set_to_from(self):
+        self.call_to = self._s.get("to") or {}
+        self.call_from = self._s.get("from") or {}
+
+        if self.call_to.get("id"):
+            self.call_to["phone_number"] = models.PhoneNumber(
+                self.call_to["id"])
+        if self.call_from.get("id"):
+            self.call_from["phone_number"] = models.PhoneNumber(
+                self.call_from["id"])

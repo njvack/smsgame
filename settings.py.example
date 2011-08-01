@@ -24,8 +24,10 @@ DATABASES = {
     }
 }
 
-TROPO_SMS_TOKEN = '5237091579554c47ae0fd828a3c951ecc9e7136f833d0d9dd7107124130b9be5e9ef8f8c56fe8b4a9bc7abda'
+TROPO_SMS_TOKEN = ''
 TROPO_SESSION_URL = 'https://api.tropo.com/1.0/sessions'
+TROPO_PATH_PARAM = 'path'
+TROPO_INCOMING_TEXT_PATH = '/incoming/'
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name

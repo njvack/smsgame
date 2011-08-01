@@ -45,6 +45,15 @@ class PhoneNumber(object):
     def __str__(self):
         return self.__unicode__()
 
+    def __eq__(self, other):
+        sstr = str(self)
+        ostr = str(other)
+        return (sstr == ostr) and (len(sstr) > 0) and other is not None
+        return str(self) == str(other)
+
+    def __ne__(self, other):
+        return not self == other
+
     def __repr__(self):
         return "%s.%s('%s')" % (
             self.__class__.__module__,
@@ -329,32 +338,6 @@ class OutgoingTextMessage(StampedModel):
         max_length=140)
 
     tropo_json = models.TextField()
-
-
-class IncomingTropoSession(object):
-
-    def __init__(self, json_text):
-        self.json_text = json_text
-        self.parsed = json.loads(json_text)
-        self.session_data = self.parsed['session']
-
-    def __getitem__(self, key):
-        return self.session_data.get(key)
-
-    def __contains__(self, key):
-        return key in self.session_data
-
-    def __repr__(self):
-        return self.session_data.__repr__()
-
-    def __str__(self):
-        return str(self.session_data)
-
-    def get(self, key):
-        return self[key]
-
-    def keys(self):
-        return self.session_data.keys()
 
 
 class OutgoingTropoSession(object):
