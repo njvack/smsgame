@@ -85,6 +85,12 @@ class PhoneNumberTest(TestCase):
         ph = models.PhoneNumber(num)
         self.assertEqual(formatted, str(ph))
 
+    def testTropoFormatting(self):
+        num = "6085551212"
+        formatted = "16085551212"
+        ph = models.PhoneNumber(num)
+        self.assertEqual(formatted, ph.for_tropo)
+
     def testEqualty(self):
         num = "6085551212"
         p1 = models.PhoneNumber(num)

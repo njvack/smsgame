@@ -26,18 +26,25 @@ class PhoneNumber(object):
     def __unicode__(self):
         n = self.cleaned
         if len(n) == 7:
-            return self.seven_digit()
+            return self.seven_digit
         if len(n) == 10:
-            return self.ten_digit()
+            return self.ten_digit
         return n
 
+    @property
     def seven_digit(self):
         n = self.cleaned
         return "%s-%s" % (n[0:3], n[3:])
 
+    @property
     def ten_digit(self):
         n = self.cleaned
         return "(%s) %s-%s" % (n[0:3], n[3:6], n[6:])
+
+    @property
+    def for_tropo(self):
+        """ Return something like 16085551212 """
+        return "1%s" % self.cleaned
 
     def __len__(self):
         return len(self.cleaned)
