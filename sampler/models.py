@@ -357,15 +357,6 @@ class OutgoingTropoSession(object):
         self.url = url
         self.sms_token = sms_token
 
-    def trigger_model_action(self, model, action):
-        model_name = model.__class__.__name__
-        opts = {
-            'query_type': 'model_trigger',
-            'model': model_name,
-            'pk': model.pk,
-            'action': action}
-        self.request_session(opts)
-
     def request_session(self, options):
         my_opts = {}
         my_opts.update(dict(options))
