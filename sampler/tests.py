@@ -16,6 +16,7 @@ import datetime
 from . import models
 from . import validators
 from . import views
+from sampler.management.commands import schedule_and_send_messages
 
 
 class ParticipantTest(TestCase):
@@ -25,13 +26,27 @@ class ParticipantTest(TestCase):
         self.today = datetime.date(2011, 7, 1) # Not really today.
         self.exp = models.Experiment.objects.create()
         self.p1 = models.Participant.objects.create(
-            experiment=self.exp, start_date=self.today)
+            experiment=self.exp, start_date=self.today, 
+            phone_number='6085551212')
+        self.early = datetime.datetime(2011, 7, 1, 8, 30)
+        self.td_start = datetime.datetime(2011, 7, 1, 9, 30)
+        self.td_end = datetime.datetime(2011, 7, 1, 19, 00)
+        self.late = datetime.datetime(2011, 7, 1, 20, 00)
+        self.td1 = self.p1.taskday_set.create(
+            task_day=self.td_start.date(),
+            start_time=self.td_start.time(),
+            end_time=self.td_end.time())
 
     def testPptDoesntAllowCrazyStatus(self):
         p1 = self.p1
         p1.status = "crazy"
         with self.assertRaises(ValidationError):
             p1.save()
+
+    def testSetNextContactTime(self):
+        self.assertIsNone(self.p1.next_contact_time)
+        self.p1.generate_contact_after(self.td_start)
+        self.assertLess(self.td_start, self.p1.next_contact_time)
 
 
 class PhoneNumberTest(TestCase):
@@ -126,6 +141,42 @@ class TaskDayTest(TestCase):
         self.td1.set_status_for_time(self.td_end)
         self.assertEqual('complete', self.td1.status)
 
+    def testWaitingManagerWorks(self):
+        tdset = models.TaskDay.waiting.all()
+        self.assertEqual(self.td1, tdset[0])
+        tdset = models.TaskDay.waiting.for_datetime(self.td_start)
+        self.assertEqual(self.td1, tdset[0])
+
+    def testActiveManagerWorks(self):
+        models.TaskDay.objects.update(status='active')
+        tdset = models.TaskDay.active.all()
+        self.assertEqual(self.td1, tdset[0])
+        tdset = models.TaskDay.active.expiring(self.late)
+        self.assertEqual(self.td1, tdset[0])
+
+    def testGetRandomFirstContactTime(self):
+        fct = self.td1.get_random_first_contact_time()
+        delta_min = (fct - self.td1.earliest_contact).seconds/60
+        self.assertLessEqual(delta_min, self.exp.min_time_between_samples)
+    
+    def testEndDaySetsStatusAndClearsPptNct(self):
+        models.TaskDay.objects.update(status='active')
+        models.Participant.objects.update(next_contact_time=self.late)
+        self.td1.end_day(self.late)
+        td = models.TaskDay.objects.get(pk=self.td1.pk)
+        ppt = td.participant
+        self.assertEqual('complete', td.status)
+        self.assertIsNone(ppt.next_contact_time)
+        self.assertEqual('complete', ppt.status)
+
+    def testIsLastTaskDay(self):
+        tomorrow = datetime.date(2011, 7, 2)
+        td2 = self.p1.taskday_set.create(
+            task_day=tomorrow,
+            start_time=self.td_start.time(),
+            end_time=self.td_end.time())
+        self.assertFalse(self.td1.is_last_task_day())
+        self.assertTrue(td2.is_last_task_day())
 
 class TropoRequestTest(TestCase):
 
@@ -251,3 +302,33 @@ class IncludesValidatorTest(TestCase):
 
     def testIVDoesNotRaiseForSuccess(self):
         self.assertIsNone(self.iv('foo'))
+
+
+class SecheduleAndSendTest(TestCase):
+
+    def setUp(self):
+        self.today = datetime.date(2011, 7, 1) # Not really today.
+        self.exp = models.Experiment.objects.create()
+        self.p1 = models.Participant.objects.create(
+            experiment=self.exp, start_date=self.today,
+            phone_number='6085551212')
+        self.early = datetime.datetime(2011, 7, 1, 8, 30)
+        self.td_start = datetime.datetime(2011, 7, 1, 9, 30)
+        self.td_end = datetime.datetime(2011, 7, 1, 19, 00)
+        self.late = datetime.datetime(2011, 7, 1, 20, 00)
+        self.td1 = self.p1.taskday_set.create(
+            task_day=self.td_start.date(),
+            start_time=self.td_start.time(),
+            end_time=self.td_end.time())
+        self.cmd = schedule_and_send_messages.Command()
+
+    def test_command_runs(self):
+        opts = {'now':self.td_start}
+        self.cmd.handle_noargs(**opts)
+
+    def test_sets_ppt_next_contact_time(self):
+        self.assertIsNone(self.p1.next_contact_time)
+        opts = {'now':self.td_start}
+        self.cmd.handle_noargs(**opts)
+        p = models.Participant.objects.get(pk=self.p1.pk)
+        self.assertIsNotNone(p.next_contact_time)

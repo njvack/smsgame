@@ -1,8 +1,7 @@
 from django.conf.urls.defaults import *
-import views
 
 urlpatterns = patterns(''
-    ,(r'^tropo$', views.tropo)
-    ,(r'^incoming$', views.incoming_message)
-    ,(r'^request_baseline', views.request_baseline)
+    ,url(r'^tropo$', 'sampler.views.tropo')
+    ,url(r'^incoming$', 'sampler.views.incoming_message')
+    ,url(r'^request_baseline', 'sampler.views.request_baseline')
 )

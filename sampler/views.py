@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.core.urlresolvers import resolve
+from django.core.urlresolvers import reverse, resolve
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
@@ -46,6 +46,7 @@ def request_baseline(request):
     response = HttpResponse(content_type='applicaion/json')
     response.write(t.RenderJson())
     return response
+
 
 class TropoRequest(object):
     """

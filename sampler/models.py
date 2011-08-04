@@ -95,7 +95,7 @@ class StampedModel(models.Model):
 
 class Participant(StampedModel):
 
-    experiment = models.ForeignKey("Experiment")
+    experiment = models.ForeignKey('Experiment')
 
     phone_number = PhoneNumberField(
         max_length=255,
@@ -112,8 +112,7 @@ class Participant(StampedModel):
 
     next_contact_time = models.DateTimeField(
         blank=True,
-        null=True,
-        editable=False)
+        null=True)
 
     def assign_task_days(self, num):
         for i in range(num):
@@ -136,18 +135,42 @@ class Participant(StampedModel):
         return random.sample(
             range(self.experiment.day_count),
             self.experiment.game_count)
-
-    def wake_up(self, task_day, skip_save=False):
-        self.status = "baseline"
-        delta = datetime.timedelta(minutes=random.randint(
-            1, self.experiment.min_time_between_samples))
-        start_time = task_day.earliest_contact
-        self.next_contact_time = start_time + delta
+    
+    def generate_contact_after(self, dt, skip_save=False):
+        minutes = random.randint(
+            self.experiment.min_time_between_samples,
+            self.experiment.max_time_between_samples)
+        delta = datetime.timedelta(minutes=minutes)
+        self.next_contact_time = dt+delta
+        sample = self.experiencesample_set.create(
+            scheduled_at=self.next_contact_time)
+        if not skip_save:
+            self.save()
+    
+    def current_contact_type(self):
+        """ Returns something like 'experiencesample'  or 'game_confirmation' 
+        Always 'expreiencesample' or None now
+        """
+        es = self.experiencesample_set.order_by("-scheduled_at")[0]
+        if es.answered_at is None:
+            return 'experiencesample'
+        return None
+    
+    def wake_up(self, first_contact_time, skip_save=False):
+        self.status = 'baseline'
+        self.next_contact_time = first_contact_time
+        if not skip_save:
+            self.save()
+    
+    def go_to_sleep(self, complete, skip_save=False):
+        self.next_contact_time = None
+        if complete:
+            self.status = 'complete'
         if not skip_save:
             self.save()
 
     def __unicode__(self):
-        return "Participant %s: %s, starts %s" % (
+        return 'Participant %s: %s, starts %s' % (
             self.pk, self.phone_number, self.start_date)
 
     def save(self, *args, **kwargs):
@@ -209,8 +232,8 @@ class Experiment(StampedModel):
 
 class ExperienceSample(StampedModel):
 
-    task_day = models.ForeignKey(
-        "TaskDay",
+    participant = models.ForeignKey(
+        "Participant",
         editable=False)
 
     outgoing_text = models.ForeignKey(
@@ -244,10 +267,41 @@ class ExperienceSample(StampedModel):
         blank=True)
 
 
+class TaskDayWaitingManager(models.Manager):
+
+    def get_query_set(self):
+        return super(TaskDayWaitingManager, self).get_query_set().filter(
+            status='waiting')
+
+    def for_datetime(self, dt):
+        return self.get_query_set().filter(
+            earliest_contact__lte=dt).filter(
+            latest_contact__gte=dt)
+
+
+class TaskDayActiveManager(models.Manager):
+
+    def get_query_set(self):
+        return super(TaskDayActiveManager, self).get_query_set().filter(
+            status='active')
+
+    def for_datetime(self, dt):
+        return self.get_query_set().filter(
+            earliest_contact__lte=dt).filter(
+            latest_contact__gte=dt)
+
+    def expiring(self, dt):
+        return self.get_query_set().filter(
+            latest_contact__lte=dt)
+
+
 class TaskDay(StampedModel):
 
-    class Meta:
-        unique_together = ('participant', 'task_day')
+    objects = models.Manager()
+
+    waiting = TaskDayWaitingManager()
+
+    active = TaskDayActiveManager()
 
     STATUSES = ('waiting', 'active', 'complete')
 
@@ -277,8 +331,8 @@ class TaskDay(StampedModel):
         default=False)
 
     def __unicode__(self):
-        return "%s (%s-%s)" % (
-            self.task_day, self.start_time, self.end_time)
+        return "TaskDay %s: %s (%s-%s)" % (
+            self.pk, self.task_day, self.start_time, self.end_time)
 
     def set_status_for_time(self, dt, skip_save=False):
         self.__set_contact_fields()
@@ -291,6 +345,30 @@ class TaskDay(StampedModel):
 
         if not skip_save:
             self.save()
+
+    def start_day(self, dt, skip_save=False):
+        """
+        Set my status to active, and schedule a first contact for my ppt
+        """
+        self.set_status_for_time(dt, skip_save)
+        self.participant.wake_up(
+            self.get_random_first_contact_time(),
+            skip_save)
+    
+    def end_day(self, td, skip_save=False):
+        self.set_status_for_time(td, skip_save)
+        complete = self.is_last_task_day
+        self.participant.go_to_sleep(complete, skip_save)
+
+    def get_random_first_contact_time(self):
+        tdelta = datetime.timedelta(
+            minutes=random.randint(0,
+                self.participant.experiment.min_time_between_samples))
+        return self.earliest_contact + tdelta
+        
+    def is_last_task_day(self):
+        last_task_day = self.participant.taskday_set.latest('task_day')
+        return self == last_task_day
 
     def __set_contact_fields(self):
         self.earliest_contact = datetime.datetime(
@@ -305,6 +383,9 @@ class TaskDay(StampedModel):
         self.clean_fields()
         self.__set_contact_fields()
         super(TaskDay, self).save(*args, **kwargs)
+
+    class Meta:
+        unique_together = ('participant', 'task_day')
 
 
 class IncomingTextMessage(StampedModel):
