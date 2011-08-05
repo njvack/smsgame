@@ -299,6 +299,15 @@ class ExperienceSample(StampedModel):
         if not skip_save:
             self.save()
 
+    def answer(self, text, answer_time, skip_save=False):
+        """
+        Tries to parse a response (throws an exception if it fails),
+        and if it succeeds, set the answered time, positive_emotion,
+        negative_emotion, and yeah.
+        """
+        if not skip_save:
+            self.save()
+
 
 class TaskDayWaitingManager(models.Manager):
 
