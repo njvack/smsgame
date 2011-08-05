@@ -26,7 +26,7 @@ class ParticipantTest(TestCase):
         self.today = datetime.date(2011, 7, 1) # Not really today.
         self.exp = models.Experiment.objects.create()
         self.p1 = models.Participant.objects.create(
-            experiment=self.exp, start_date=self.today, 
+            experiment=self.exp, start_date=self.today,
             phone_number='6085551212')
         self.early = datetime.datetime(2011, 7, 1, 8, 30)
         self.td_start = datetime.datetime(2011, 7, 1, 9, 30)
@@ -43,10 +43,11 @@ class ParticipantTest(TestCase):
         with self.assertRaises(ValidationError):
             p1.save()
 
-    def testSetNextContactTime(self):
-        self.assertIsNone(self.p1.next_contact_time)
-        self.p1.generate_contact_after(self.td_start)
-        self.assertLess(self.td_start, self.p1.next_contact_time)
+    def testGenerateContactAt(self):
+        delta = datetime.timedelta(minutes=1)
+        now = self.td_start+delta
+        self.p1.generate_contact_at(now)
+        self.assertGreater(self.p1.experiencesample_set.count, 0)
 
 
 class PhoneNumberTest(TestCase):
@@ -158,7 +159,7 @@ class TaskDayTest(TestCase):
         fct = self.td1.get_random_first_contact_time()
         delta_min = (fct - self.td1.earliest_contact).seconds/60
         self.assertLessEqual(delta_min, self.exp.min_time_between_samples)
-    
+
     def testEndDaySetsStatusAndClearsPptNct(self):
         models.TaskDay.objects.update(status='active')
         models.Participant.objects.update(next_contact_time=self.late)
@@ -177,6 +178,7 @@ class TaskDayTest(TestCase):
             end_time=self.td_end.time())
         self.assertFalse(self.td1.is_last_task_day())
         self.assertTrue(td2.is_last_task_day())
+
 
 class TropoRequestTest(TestCase):
 
@@ -323,12 +325,12 @@ class SecheduleAndSendTest(TestCase):
         self.cmd = schedule_and_send_messages.Command()
 
     def test_command_runs(self):
-        opts = {'now':self.td_start}
+        opts = {'now': self.td_start}
         self.cmd.handle_noargs(**opts)
 
     def test_sets_ppt_next_contact_time(self):
         self.assertIsNone(self.p1.next_contact_time)
-        opts = {'now':self.td_start}
+        opts = {'now': self.td_start}
         self.cmd.handle_noargs(**opts)
         p = models.Participant.objects.get(pk=self.p1.pk)
         self.assertIsNotNone(p.next_contact_time)

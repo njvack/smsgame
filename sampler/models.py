@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.core.urlresolvers import reverse
+
 
 import datetime
 import json
@@ -135,33 +137,59 @@ class Participant(StampedModel):
         return random.sample(
             range(self.experiment.day_count),
             self.experiment.game_count)
-    
-    def generate_contact_after(self, dt, skip_save=False):
-        minutes = random.randint(
-            self.experiment.min_time_between_samples,
-            self.experiment.max_time_between_samples)
-        delta = datetime.timedelta(minutes=minutes)
-        self.next_contact_time = dt+delta
+
+    def generate_contact_at(self, dt, skip_save=False):
+        self.next_contact_time = dt
         sample = self.experiencesample_set.create(
             scheduled_at=self.next_contact_time)
         if not skip_save:
             self.save()
-    
-    def current_contact_type(self):
-        """ Returns something like 'experiencesample'  or 'game_confirmation' 
-        Always 'expreiencesample' or None now
+
+    def generate_contact_time(self, dt):
+        delta = datetime.timedelta(minutes=random.randint(
+            self.experiment.min_time_between_samples,
+            self.experiment.max_time_between_samples))
+        return dt+delta
+
+    def make_contact(self, recorded_time, tropo_requester, skip_save=False):
         """
-        es = self.experiencesample_set.order_by("-scheduled_at")[0]
-        if es.answered_at is None:
-            return 'experiencesample'
-        return None
-    
-    def wake_up(self, first_contact_time, skip_save=False):
-        self.status = 'baseline'
-        self.next_contact_time = first_contact_time
+        Actually makes a request for contact. Sets the current contact object
+        as marked sent, clears self.next_contact_time.
+        """
+        viewname = self.current_contact_view()
+        path = reverse(viewname)
+        tropo_requester.request_session({
+            'path': path,
+            'pk': self.pk})
+
+        obj = self.current_contact_object()
+        obj.mark_sent(recorded_time, skip_save)
+        self.next_contact_time = None
         if not skip_save:
             self.save()
-    
+
+    def current_contact_view(self):
+        """ Returns something like 'sampler.views.request_baseline'
+        Always 'sampler.views.request_baseline' or None now
+        """
+        es = self.current_contact_object()
+        if es is not None:
+            return 'sampler.views.request_baseline'
+        return None
+
+    def current_contact_object(self):
+        exp_samples = self.experiencesample_set.order_by("-scheduled_at")[:1]
+        if len(exp_samples) == 0:
+            return None
+        es = exp_samples[0]
+        if es.answered_at is None:
+            return es
+        return None
+
+    def wake_up(self, first_contact_time, skip_save=False):
+        self.status = 'baseline'
+        self.generate_contact_at(first_contact_time, skip_save)
+
     def go_to_sleep(self, complete, skip_save=False):
         self.next_contact_time = None
         if complete:
@@ -266,6 +294,11 @@ class ExperienceSample(StampedModel):
         null=True,
         blank=True)
 
+    def mark_sent(self, recorded_time, skip_save=False):
+        self.sent_at = recorded_time
+        if not skip_save:
+            self.save()
+
 
 class TaskDayWaitingManager(models.Manager):
 
@@ -354,7 +387,7 @@ class TaskDay(StampedModel):
         self.participant.wake_up(
             self.get_random_first_contact_time(),
             skip_save)
-    
+
     def end_day(self, td, skip_save=False):
         self.set_status_for_time(td, skip_save)
         complete = self.is_last_task_day
@@ -365,7 +398,7 @@ class TaskDay(StampedModel):
             minutes=random.randint(0,
                 self.participant.experiment.min_time_between_samples))
         return self.earliest_contact + tdelta
-        
+
     def is_last_task_day(self):
         last_task_day = self.participant.taskday_set.latest('task_day')
         return self == last_task_day
@@ -436,6 +469,7 @@ class OutgoingTropoSession(object):
         my_opts.update({'token': self.sms_token})
         for k, v in my_opts.iteritems():
             my_opts[k] = str(v)
+        logger.debug("Requesting session with opts: %s" % my_opts)
         opts_json = json.dumps(dict(my_opts))
         req = urllib2.Request(self.url,
             opts_json, {'content-type': 'application/json'})
