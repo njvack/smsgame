@@ -50,6 +50,47 @@ class ParticipantTest(TestCase):
         self.assertGreater(self.p1.experiencesample_set.count, 0)
 
 
+class ExperienceSampleTest(TestCase):
+
+    def setUp(self):
+        self.today = datetime.date(2011, 7, 1)
+        self.now = datetime.datetime(2011, 7, 1, 9, 30)
+        self.later = datetime.datetime(2011, 7, 1, 3, 30)
+        self.exp = models.Experiment.objects.create()
+        self.p1 = models.Participant.objects.create(
+            experiment=self.exp, start_date=self.today,
+            phone_number='6085551212')
+
+        self.es = models.ExperienceSample(
+            participant=self.p1,
+            scheduled_at=self.now)
+
+    def testAnswerSetsAnsweredAt(self):
+        self.es.answer("15", self.later, True)
+        self.assertEqual(self.later, self.es.answered_at)
+
+    def testAnswerGoodSetsPosNeg(self):
+        corr = ('1', '5')
+        self.es.answer("15", self.later, True)
+        self.assertEqual(corr, self.es.val_tuple)
+        self.es.answer("1 5", self.later, True)
+        self.assertEqual(corr, self.es.val_tuple)
+        self.es.answer(" 1 5 ", self.later, True)
+        self.assertEqual(corr, self.es.val_tuple)
+        self.es.answer("asd1asdas5asdas", self.later, True)
+        self.assertEqual(corr, self.es.val_tuple)
+
+    def testAnswerFailuresRaiseError(self):
+        self.assertRaises(models.ResponseError, self.es.answer,
+            "", self.later, True)
+        self.assertRaises(models.ResponseError, self.es.answer,
+            "123", self.later, True)
+        self.assertRaises(models.ResponseError, self.es.answer,
+            "1", self.later, True)
+        self.assertRaises(models.ResponseError, self.es.answer,
+            "a", self.later, True)
+
+
 class PhoneNumberTest(TestCase):
 
     def testCreation(self):

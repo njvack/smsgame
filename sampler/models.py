@@ -258,6 +258,15 @@ class Experiment(StampedModel):
             self.pk, self.day_count, self.game_count)
 
 
+class ResponseError(ValueError):
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+
 class ExperienceSample(StampedModel):
 
     participant = models.ForeignKey(
@@ -299,14 +308,38 @@ class ExperienceSample(StampedModel):
         if not skip_save:
             self.save()
 
-    def answer(self, text, answer_time, skip_save=False):
+    def answer(self, text, answered_at, skip_save=False):
         """
         Tries to parse a response (throws an exception if it fails),
         and if it succeeds, set the answered time, positive_emotion,
         negative_emotion, and yeah.
         """
+        parse_re = re.compile(
+                r"""
+                ^[^1-9]*
+                (?P<positive_emotion>[1-9])
+                [^1-9]*
+                (?P<negative_emotion>[1-9])
+                [^1-9]*$""",
+            re.VERBOSE)
+
+        try:
+            matches = parse_re.match(str(text))
+            self.positive_emotion = matches.group('positive_emotion')
+            self.negative_emotion = matches.group('negative_emotion')
+        except Exception as exc:
+            raise ResponseError("Could not parse %s" % text)
+
+        self.answered_at = answered_at
         if not skip_save:
             self.save()
+
+    @property
+    def val_tuple(self):
+        return (self.positive_emotion, self.negative_emotion)
+
+    def __str__(self):
+        return "%s %s" % (self.positive_emotion, self.negative_emotion)
 
 
 class TaskDayWaitingManager(models.Manager):
