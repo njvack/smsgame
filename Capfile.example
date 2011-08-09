@@ -1,0 +1,61 @@
+load 'deploy'
+
+set :user, "vack"
+set :run_as, "sms-sampler"
+set :application, "smsgame"
+set :ssh_options , {:forward_agent => true}
+set :deploy_to, "/var/www/cap_deployments/#{application}"
+set :pidfile, "#{shared_path}/var/gunicorn.pid"
+set :gunicorn_cmd, "#{shared_path}/bin/#{application}"
+set :use_sudo, false
+
+set :scm, :git
+set :repository,  "ssh://tezpur/home/vack/git/smsgame"
+
+role :web, "camelot.keck.waisman.wisc.edu"                          # Your HTTP server, Apache/etc
+role :app, "camelot.keck.waisman.wisc.edu"                          # This may be the same as your `Web` server
+set :gateway, "tezpur.keck.waisman.wisc.edu"
+
+desc <<-DESC
+  Show calculated config options
+DESC
+task :info do
+  puts "application: #{application}"
+  puts "repository: #{repository}"
+  puts "releases_path: #{releases_path}"
+  puts "shared_path: #{shared_path}"
+  puts "deploy_to: #{deploy_to}"
+  puts "current_path: #{current_path}"
+  puts "pidfile: #{pidfile}"
+  puts "gunicorn_cmd: #{gunicorn_cmd}"
+end
+
+namespace :deploy do
+  desc <<-DESC
+    Copy settings.py and .htaccess where they belong
+  DESC
+  task :finalize_update do
+    run "cp -f #{shared_path}/system/settings.py #{release_path}/settings.py"
+    run "cp -f #{shared_path}/system/.htaccess #{release_path}/static/.htaccess"
+    run "ln -sf #{shared_path}/log #{release_path}/log"    
+    run "ln -sf #{shared_path}/db #{release_path}/db"    
+  end
+  
+  task :start do
+    default_run_options[:pty] = true 
+    sudo "#{gunicorn_cmd} start", :as => run_as
+  end
+  
+  task :restart do
+    default_run_options[:pty] = true 
+    sudo "#{gunicorn_cmd} restart", :as => run_as
+  end
+  
+  task :stop do
+    default_run_options[:pty] = true 
+    sudo "#{gunicorn_cmd} stop", :as => run_as
+  end
+  
+end
+
+after :deploy, "deploy:cleanup"
