@@ -91,6 +91,26 @@ class ExperienceSampleTest(TestCase):
             "a", self.later, True)
 
 
+class IncomingTextTest(TestCase):
+
+    def setUp(self):
+        self.today = datetime.date(2011, 7, 1)
+        self.now = datetime.datetime(2011, 7, 1, 9, 30)
+        self.exp = models.Experiment.objects.create()
+        self.p1 = models.Participant.objects.create(
+            experiment=self.exp, start_date=self.today,
+            phone_number='6085551212')
+
+    def testStringRepresentation(self):
+        msg = "I was once a kitten"
+        tm = models.IncomingTextMessage(
+            participant=self.p1,
+            phone_number=self.p1.phone_number,
+            message_text=msg,
+            tropo_json="foo")
+        self.assertEqual(msg, str(tm))
+
+
 class PhoneNumberTest(TestCase):
 
     def testCreation(self):
@@ -310,6 +330,9 @@ class TropoRequestTest(TestCase):
         to_num = models.PhoneNumber("16086164697")
         self.assertEqual(from_num, self.sms_request.call_from['phone_number'])
         self.assertEqual(to_num, self.sms_request.call_to['phone_number'])
+
+    def testIncomingText(self):
+        self.assertEqual(self.sms_request.text_content, "One more")
 
     def change_settings_var(self, var_name, new_value):
         if not hasattr(self, "old_settings"):

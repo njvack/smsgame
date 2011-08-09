@@ -2,10 +2,11 @@ from django.conf import settings
 from django.core.urlresolvers import reverse, resolve
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-
-import json
 import logging
 logger = logging.getLogger("smsgame")
+
+import datetime
+import json
 
 from tropo import Tropo
 
@@ -30,8 +31,41 @@ def tropo(request):
 
 def incoming_message(request):
     t = Tropo()
-    t.say("This was for an incoming message.")
     response = HttpResponse(content_type='application/json')
+    logger.debug(request.call_from)
+    num = request.call_from['phone_number']
+    logger.debug("Incoming message from %s" % num)
+    ppt = None
+    try:
+        ppt = models.Participant.objects.get(phone_number=num)
+    except models.Participant.DoesNotExist:
+        pass
+    tm = models.IncomingTextMessage.objects.create(
+        participant=ppt,
+        phone_number=num,
+        message_text=request.text_content,
+        tropo_json=request.raw_data)
+    logger.debug("Message: %s" % tm)
+
+    if ppt is None:
+        logger.debug("No participant found.")
+        t.hangup()
+        response.write(t.RenderJson())
+        return response
+
+    obj = ppt.current_contact_object()
+    logger.debug("Response object: %s" % obj)
+
+    try:
+        obj.answer(tm, datetime.datetime.now())
+    except models.ResponseError as exc:
+        logger.debug(exc)
+        t.say("Sorry, we didn't understand your response.")
+    except AttributeError as exc:
+        # Probably obj is None... nothing to answer.
+        logger.debug(exc)
+        t.hangup()
+
     response.write(t.RenderJson())
     return response
 
@@ -74,6 +108,7 @@ class TropoRequest(object):
         self.__set_parameters()
         self.__set_path()
         self.__set_to_from()
+        self.__set_text_content()
 
     def __set_method(self):
         self.method = "POST"
@@ -101,3 +136,6 @@ class TropoRequest(object):
         if self.call_from.get("id"):
             self.call_from["phone_number"] = models.PhoneNumber(
                 self.call_from["id"])
+
+    def __set_text_content(self):
+        self.text_content = self._s.get("initialText")

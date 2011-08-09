@@ -478,6 +478,9 @@ class IncomingTextMessage(StampedModel):
 
     tropo_json = models.TextField()
 
+    def __str__(self):
+        return str(self.message_text)
+
 
 class OutgoingTextMessage(StampedModel):
 
