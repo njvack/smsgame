@@ -41,8 +41,22 @@ class ParticipantAdmin(admin.ModelAdmin):
             obj.assign_game_days(obj.random_game_day_numbers())
 
 
+class IncomingTextMessageAdmin(admin.ModelAdmin):
+
+    list_display = ('phone_number', 'created_at', '__str__')
+    list_filter = ('phone_number', 'participant')
+
+    ordering = ('-created_at', )
+
+
+class ExperienceSampleAdmin(admin.ModelAdmin):
+
+    list_display = ('participant', 'sent_at', 'answered_at')
+    list_filter = ('participant', )
+
+
 admin.site.register(models.Experiment, ExperimentAdmin)
 admin.site.register(models.Participant, ParticipantAdmin)
 admin.site.register(models.TaskDay)
-admin.site.register(models.IncomingTextMessage)
-admin.site.register(models.ExperienceSample)
+admin.site.register(models.IncomingTextMessage, IncomingTextMessageAdmin)
+admin.site.register(models.ExperienceSample, ExperienceSampleAdmin)
