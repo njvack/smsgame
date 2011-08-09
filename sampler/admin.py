@@ -44,3 +44,5 @@ class ParticipantAdmin(admin.ModelAdmin):
 admin.site.register(models.Experiment, ExperimentAdmin)
 admin.site.register(models.Participant, ParticipantAdmin)
 admin.site.register(models.TaskDay)
+admin.site.register(models.IncomingTextMessage)
+admin.site.register(models.ExperienceSample)
