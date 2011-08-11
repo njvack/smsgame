@@ -171,7 +171,7 @@ class TaskDayTest(TestCase):
         self.today = datetime.date(2011, 7, 1) # Not really today.
         self.exp = models.Experiment.objects.create()
         self.p1 = models.Participant.objects.create(
-            experiment=self.exp, start_date=self.today)
+            experiment=self.exp, start_date=self.today, status='baseline')
         self.early = datetime.datetime(2011, 7, 1, 8, 30)
         self.td_start = datetime.datetime(2011, 7, 1, 9, 30)
         self.td_end = datetime.datetime(2011, 7, 1, 19, 00)

@@ -103,12 +103,18 @@ class Participant(StampedModel):
         max_length=255,
         unique=True)
 
-    STATUSES = ('baseline', 'game', 'complete')
+    STATUSES = {
+        'baseline': {
+            'timing_fx': 'generate_contact_time',
+            'collection': 'experiencesample_set'},
+        'complete': {
+            'timing_fx': None,
+            'collection': None }}
 
     status = models.CharField(
         max_length=20,
-        default=STATUSES[0],
-        validators=[validators.IncludesValidator(STATUSES)])
+        default='baseline',
+        validators=[validators.IncludesValidator(STATUSES.keys())])
 
     start_date = models.DateField()
 
@@ -137,6 +143,11 @@ class Participant(StampedModel):
         return random.sample(
             range(self.experiment.day_count),
             self.experiment.game_count)
+
+    def generate_contact_from_status(self, status, *args, **kwargs):
+        skip_save = kwargs.get('skip_save')
+        data = self.STATUSES[status]
+        timing_fx = getattr(self, data['timing_fx'])
 
     def generate_contact_at(self, dt, skip_save=False):
         self.next_contact_time = dt
@@ -267,16 +278,10 @@ class ResponseError(ValueError):
         return repr(self.value)
 
 
-class ExperienceSample(StampedModel):
+class ParticipantExchange(StampedModel):
 
     participant = models.ForeignKey(
         "Participant",
-        editable=False)
-
-    outgoing_text = models.ForeignKey(
-        "OutgoingTextMessage",
-        null=True,
-        blank=True,
         editable=False)
 
     incoming_text = models.ForeignKey(
@@ -294,6 +299,12 @@ class ExperienceSample(StampedModel):
     answered_at = models.DateTimeField(
         null=True,
         blank=True)
+
+    class Meta:
+        abstract = True
+
+
+class ExperienceSample(ParticipantExchange):
 
     positive_emotion = models.IntegerField(
         null=True,
