@@ -301,8 +301,17 @@ class ResponseError(ValueError):
 
 class ParticipantExchangeManager(models.Manager):
 
-    def newest_unanswered(self):
-        return self.get_query_set().filter(answered_at__isnull=True)[:1]
+    def newest_if_unanswered(self):
+        pe = self.newest()
+        if pe and pe.answered_at is None:
+            return pe
+        return None
+
+    def newest(self):
+        try:
+            return self.get_query_set()[0]
+        except IndexError:
+            return None
 
 
 class ParticipantExchange(StampedModel):
