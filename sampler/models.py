@@ -109,7 +109,7 @@ class Participant(StampedModel):
             'collection': 'experiencesample_set'},
         'complete': {
             'timing_fx': None,
-            'collection': None }}
+            'collection': None}}
 
     status = models.CharField(
         max_length=20,
@@ -157,10 +157,31 @@ class Participant(StampedModel):
             self.save()
 
     def generate_contact_time(self, dt):
-        delta = datetime.timedelta(minutes=random.randint(
-            self.experiment.min_time_between_samples,
-            self.experiment.max_time_between_samples))
-        return dt+delta
+        nct = None
+        if self.status == "sleeping":
+            delta = datetime.timedelta(minutes=random.randint(
+                0, self.experiment.min_time_between_samples))
+            nct = dt+delta
+        elif self.status == "baseline":
+            delta = datetime.timedelta(minutes=random.randint(
+                self.experiment.min_time_between_samples,
+                self.experiment.max_time_between_samples))
+            nct = dt+delta
+            game_time = self.gamepermission_set.filter(answered_at=None)[:1]
+        elif self.status == "game_permission":
+            nct = dt
+        elif self.status == "game_get_guess":
+            nct = dt
+        elif self.status == "game_inter_sample":
+            nct = dt
+        elif self.status == "game_result":
+            delta = datetime.timedelta(minutes=random.randint(5, 8))
+            nct = dt+delta
+        elif self.status == "game_result_sample":
+            delta = datetime.timedelta(minutes=random.randint(1, 4))
+        elif self.status == "game_post_sample":
+            nct = dt
+        return nct
 
     def make_contact(self, recorded_time, tropo_requester, skip_save=False):
         """
@@ -278,7 +299,15 @@ class ResponseError(ValueError):
         return repr(self.value)
 
 
+class ParticipantExchangeManager(models.Manager):
+
+    def newest_unanswered(self):
+        return self.get_query_set().filter(answered_at__isnull=True)[:1]
+
+
 class ParticipantExchange(StampedModel):
+
+    objects = ParticipantExchangeManager()
 
     participant = models.ForeignKey(
         "Participant",
@@ -307,6 +336,7 @@ class ParticipantExchange(StampedModel):
 
     class Meta:
         abstract = True
+        ordering = ['-scheduled_at']
 
 
 class ExperienceSample(ParticipantExchange):
@@ -351,13 +381,13 @@ class ExperienceSample(ParticipantExchange):
 
     def __str__(self):
         return "%s %s" % (self.positive_emotion, self.negative_emotion)
-    
+
     def message(self):
         return "Enter how much positive emotion (1-9) and negative emotion (1-9) you are feeling right now."
 
 
 class GamePermission(ParticipantExchange):
-    
+
     permissed = models.BooleanField(
         default=False)
 
@@ -366,19 +396,31 @@ class GamePermission(ParticipantExchange):
 
 
 def random_hi_low():
-    num = random.randint(1,8)
+    num = random.randint(1, 8)
     if num >= 5:
         num += 1
     return num
 
 
 class HiLowGame(ParticipantExchange):
-    
+
     correct_guess = models.IntegerField(
         default=random_hi_low)
-    
+
+    guessed_low = models.NullBooleanField(
+        blank=True,
+        null=True)
+
     def message(self):
         return "We generated a number between 1 and 9. Guess if it's lower or higher than 5. (low/high)"
+
+    def result_message(self):
+        is_low = self.correct_guess < 5
+        if (is_low == guessed_low):
+            msg = "The number was %s. You guessed right! $20 has been added to your account." % self.correct_guess
+        else:
+            msg = "The number was %s. You guessed wrong. No money additional money has been added to your account."
+        return msg
 
 
 class TaskDayWaitingManager(models.Manager):
