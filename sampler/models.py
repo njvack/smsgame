@@ -300,6 +300,11 @@ class ParticipantExchange(StampedModel):
         null=True,
         blank=True)
 
+    def mark_sent(self, recorded_time, skip_save=False):
+        self.sent_at = recorded_time
+        if not skip_save:
+            self.save()
+
     class Meta:
         abstract = True
 
@@ -313,11 +318,6 @@ class ExperienceSample(ParticipantExchange):
     negative_emotion = models.IntegerField(
         null=True,
         blank=True)
-
-    def mark_sent(self, recorded_time, skip_save=False):
-        self.sent_at = recorded_time
-        if not skip_save:
-            self.save()
 
     def answer(self, text, answered_at, skip_save=False):
         """
@@ -351,6 +351,34 @@ class ExperienceSample(ParticipantExchange):
 
     def __str__(self):
         return "%s %s" % (self.positive_emotion, self.negative_emotion)
+    
+    def message(self):
+        return "Enter how much positive emotion (1-9) and negative emotion (1-9) you are feeling right now."
+
+
+class GamePermission(ParticipantExchange):
+    
+    permissed = models.BooleanField(
+        default=False)
+
+    def message(self):
+        return "Are you ready to play a game and answer more text messages for the next two hours? (y/n)"
+
+
+def random_hi_low():
+    num = random.randint(1,8)
+    if num >= 5:
+        num += 1
+    return num
+
+
+class HiLowGame(ParticipantExchange):
+    
+    correct_guess = models.IntegerField(
+        default=random_hi_low)
+    
+    def message(self):
+        return "We generated a number between 1 and 9. Guess if it's lower or higher than 5. (low/high)"
 
 
 class TaskDayWaitingManager(models.Manager):
