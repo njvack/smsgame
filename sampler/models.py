@@ -107,6 +107,11 @@ class Participant(StampedModel):
         'baseline': {
             'timing_fx': 'generate_contact_time',
             'collection': 'experiencesample_set'},
+        'game_permission': {},
+        'game_guess': {},
+        'game_inter_sample': {},
+        'game_reveal': {},
+        'game_post_sample': {},
         'complete': {
             'timing_fx': None,
             'collection': None}}
@@ -170,7 +175,7 @@ class Participant(StampedModel):
             game_time = self.gamepermission_set.filter(answered_at=None)[:1]
         elif self.status == "game_permission":
             nct = dt
-        elif self.status == "game_get_guess":
+        elif self.status == "game_guess":
             nct = dt
         elif self.status == "game_inter_sample":
             nct = dt
@@ -309,8 +314,8 @@ class ParticipantExchangeManager(models.Manager):
 
     def newest(self):
         try:
-            return self.get_query_set()[0]
-        except IndexError:
+            return self.latest('created_at')
+        except:
             return None
 
 
@@ -516,6 +521,11 @@ class TaskDay(StampedModel):
         Set my status to active, and schedule a first contact for my ppt
         """
         self.set_status_for_time(dt, skip_save)
+        if self.is_game_day:
+            GAME_PADDING_SEC=150*60
+            game_time = self.random_time_before_day_end(GAME_PADDING_SEC)
+            self.participant.gamepermission_set.create(
+                scheduled_at=game_time)
         self.participant.wake_up(
             self.get_random_first_contact_time(),
             skip_save)
@@ -524,6 +534,13 @@ class TaskDay(StampedModel):
         self.set_status_for_time(td, skip_save)
         complete = self.is_last_task_day
         self.participant.go_to_sleep(complete, skip_save)
+
+    def random_time_before_day_end(self, before_end_sec):
+        day_len = (self.latest_contact - self.earliest_contact)
+        available_time_sec = day_len.seconds - before_end_sec
+        offset_sec = random.randint(0, available_time_sec)
+        dt = self.earliest_contact + datetime.timedelta(seconds=offset_sec)
+        return dt
 
     def get_random_first_contact_time(self):
         tdelta = datetime.timedelta(

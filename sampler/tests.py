@@ -240,6 +240,13 @@ class TaskDayTest(TestCase):
         self.assertFalse(self.td1.is_last_task_day())
         self.assertTrue(td2.is_last_task_day())
 
+    def testStartDayCreatesGame(self):
+        self.td1.is_game_day = True
+        self.td1.save()
+        self.assertEqual(0, self.p1.gamepermission_set.count())
+        self.td1.start_day(self.td_start)
+        self.assertEqual(1, self.p1.gamepermission_set.count())
+
 
 class TropoRequestTest(TestCase):
 
