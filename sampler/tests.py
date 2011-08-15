@@ -62,6 +62,15 @@ class ParticipantTest(TestCase):
         self.assertEqual(2, len(p.newest_contact_objects()))
         p.hilowgame_set.create(scheduled_at=t)
         self.assertEqual(3, len(p.newest_contact_objects()))
+    
+    def testBaselineTransition(self):
+        p = self.p1
+        p.status = 'baseline'
+        p.gamepermission_set.create(scheduled_at=self.early)
+        p.next_contact_time = self.td_start
+        p.save()
+        p._baseline_transition()
+        self.assertEqual(p.status, 'game_permission')
 
 
 class ExperienceSampleTest(TestCase):

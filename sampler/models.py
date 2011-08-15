@@ -15,7 +15,8 @@ import logging
 logger = logging.getLogger("smsgame")
 
 SEC_IN_MIN = 60
-
+GAME_PADDING_SEC = 150 * SEC_IN_MIN
+POST_SAMPLE_PERIOD_SEC = 120 * SEC_IN_MIN
 
 class PhoneNumber(object):
 
@@ -161,23 +162,16 @@ class Participant(StampedModel):
             self.save()
 
     def _sleeping_contact_time(self, dt):
-        game_permission = self.gamepermission_set.newest_if_unanswered()
         delta = datetime.timedelta(minutes=random.randint(
             0, self.experiment.min_time_between_samples))
         nct = dt+delta
-        if game_permission and game_permission.scheduled_at < nct:
-            nct = game_permission.scheduled_at
         return nct
 
     def _baseline_contact_time(self, dt):
-        game_permission = self.gamepermission_set.newest_if_unanswered()
         delta = datetime.timedelta(minutes=random.randint(
             self.experiment.min_time_between_samples,
             self.experiment.max_time_between_samples))
         nct = dt+delta
-        game_time = self.gamepermission_set.filter(answered_at=None)[:1]
-        if game_permission and game_permission.scheduled_at < nct:
-            nct = game_permission.scheduled_at
         return nct
 
     def _game_permission_time(self, dt):
@@ -232,6 +226,52 @@ class Participant(StampedModel):
         elif self.status == "game_post_sample":
             nct = self._game_post_sample_time(dt)
         return nct
+
+    def fire_scheduled_state_transitions(self, skip_save=False):
+        # Only a few statuses get changed this way -- others result from
+        # TaskDays starting/ending and responses to texts.
+        if self.status == "baseline":
+            self._baseline_transition()
+        elif self.status == "game_permission":
+            self._game_permission_transition()
+        elif self.status == "game_post_sample":
+            self._game_post_sample_transition()
+        if not skip_save:
+            self.save()
+
+    def _baseline_transition(self):
+        if not self.status == 'baseline':
+            return
+        # If there's a GamePermission coming before our next_contact_time,
+        # change our next_contact time and set our status to 'game_permission'
+        gp = self.gamepermission_set.newest_if_unanswered()
+        if gp and self.next_contact_time > gp.scheduled_at:
+            self.status = "game_permission"
+
+    def _game_permission_transition(self):
+        """
+        Checks to see that we really have enough time to run a game,
+        return to baseline if not.
+        """
+        if not self.status == "game_permission":
+            return
+        task_day = self.taskday_set.get(
+            task_day=self.next_contact_time.date())
+        if ((task_day.latest_contact - self.next_contact_time).seconds <
+            GAME_PADDING_SEC):
+            self.status = "baseline"
+
+    def _game_post_sample_transition(self):
+        """
+        If the highlow game was reported more than POST_SAMPLE_PERIOD_SEC
+        ago, go back to baseline
+        """
+        if not self.status  == "game_post_sample":
+            return
+        hlg = self.hilowgame_set.newest()
+        if ((self.next_contact_time - hlg.result_reported_at).seconds <
+            POST_SAMPLE_PERIOD_SEC):
+            self.status = "baseline"
 
     def make_contact(self, recorded_time, tropo_requester, skip_save=False):
         """
@@ -616,7 +656,6 @@ class TaskDay(StampedModel):
         """
         self.set_status_for_time(dt, skip_save)
         if self.is_game_day:
-            GAME_PADDING_SEC=150*SEC_IN_MIN
             game_time = self.random_time_before_day_end(GAME_PADDING_SEC)
             self.participant.gamepermission_set.create(
                 scheduled_at=game_time)
