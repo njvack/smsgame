@@ -216,11 +216,6 @@ class TaskDayTest(TestCase):
         tdset = models.TaskDay.active.expiring(self.late)
         self.assertEqual(self.td1, tdset[0])
 
-    def testGetRandomFirstContactTime(self):
-        fct = self.td1.get_random_first_contact_time()
-        delta_min = (fct - self.td1.earliest_contact).seconds/60
-        self.assertLessEqual(delta_min, self.exp.min_time_between_samples)
-
     def testEndDaySetsStatusAndClearsPptNct(self):
         models.TaskDay.objects.update(status='active')
         models.Participant.objects.update(next_contact_time=self.late)

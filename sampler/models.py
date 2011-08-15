@@ -14,6 +14,8 @@ from . import validators
 import logging
 logger = logging.getLogger("smsgame")
 
+SEC_IN_MIN = 60
+
 
 class PhoneNumber(object):
 
@@ -103,23 +105,20 @@ class Participant(StampedModel):
         max_length=255,
         unique=True)
 
-    STATUSES = {
-        'baseline': {
-            'timing_fx': 'generate_contact_time',
-            'collection': 'experiencesample_set'},
-        'game_permission': {},
-        'game_guess': {},
-        'game_inter_sample': {},
-        'game_reveal': {},
-        'game_post_sample': {},
-        'complete': {
-            'timing_fx': None,
-            'collection': None}}
+    STATUSES = (
+        "sleeping",
+        "baseline",
+        "game_permission",
+        "game_guess",
+        "game_inter_sample",
+        "game_result",
+        "game_post_sample",
+        "complete")
 
     status = models.CharField(
         max_length=20,
-        default='baseline',
-        validators=[validators.IncludesValidator(STATUSES.keys())])
+        default=STATUSES[0],
+        validators=[validators.IncludesValidator(STATUSES)])
 
     start_date = models.DateField()
 
@@ -161,31 +160,77 @@ class Participant(StampedModel):
         if not skip_save:
             self.save()
 
+    def _sleeping_contact_time(self, dt):
+        game_permission = self.gamepermission_set.newest_if_unanswered()
+        delta = datetime.timedelta(minutes=random.randint(
+            0, self.experiment.min_time_between_samples))
+        nct = dt+delta
+        if game_permission and game_permission.scheduled_at < nct:
+            nct = game_permission.scheduled_at
+        return nct
+
+    def _baseline_contact_time(self, dt):
+        game_permission = self.gamepermission_set.newest_if_unanswered()
+        delta = datetime.timedelta(minutes=random.randint(
+            self.experiment.min_time_between_samples,
+            self.experiment.max_time_between_samples))
+        nct = dt+delta
+        game_time = self.gamepermission_set.filter(answered_at=None)[:1]
+        if game_permission and game_permission.scheduled_at < nct:
+            nct = game_permission.scheduled_at
+        return nct
+
+    def _game_permission_time(self, dt):
+        game_permission = self.gamepermission_set.newest_if_unanswered()
+        nct = dt
+        if game_permission.sent_at:
+            nct = nct+datetime.timedelta(minutes=15)
+        return nct
+
+    def _game_intersample_time(self, dt):
+        nct = dt+datetime.timedelta(minutes=random.randint(1,4))
+        return nct
+
+    def _game_result_time(self, dt):
+        nct = dt+datetime.timedelta(minutes=random.randint(5,8))
+        return nct
+
+    def _game_post_sample_time(self, dt):
+        # Immediate if it's the first sample
+        # 12 += 3 if it's in the first hour
+        # 23 += 5 if it's in the second hour
+        # And it shouldn't run longer than that.
+        nct = dt
+        game = self.hilowgame_set.newest()
+        # Not having a game is impossible, should be an error -- let it.
+        rep_delta = (dt-game.result_reported_at).seconds
+        samples = self.experiencesample_set.filter(
+            scheduled_at__gt=game.result_reported_at)
+        if samples.count() == 0:
+            pass
+        elif rep_delta < 60*SEC_IN_MIN:
+            nct = dt+datetime.timedelta(minutes=random.randint(9,15))
+        else:
+            nct = dt+datetime.timedelta(minutes=random.randint(18,28))
+        return nct
+
     def generate_contact_time(self, dt):
+
         nct = None
         if self.status == "sleeping":
-            delta = datetime.timedelta(minutes=random.randint(
-                0, self.experiment.min_time_between_samples))
-            nct = dt+delta
+            nct = self._sleeping_contact_time(dt)
         elif self.status == "baseline":
-            delta = datetime.timedelta(minutes=random.randint(
-                self.experiment.min_time_between_samples,
-                self.experiment.max_time_between_samples))
-            nct = dt+delta
-            game_time = self.gamepermission_set.filter(answered_at=None)[:1]
+            nct = self._baseline_contact_time(dt)
         elif self.status == "game_permission":
-            nct = dt
+            nct = self._game_permission_time(dt)
         elif self.status == "game_guess":
             nct = dt
         elif self.status == "game_inter_sample":
-            nct = dt
+            nct = self._game_intersample_time(dt)
         elif self.status == "game_result":
-            delta = datetime.timedelta(minutes=random.randint(5, 8))
-            nct = dt+delta
-        elif self.status == "game_result_sample":
-            delta = datetime.timedelta(minutes=random.randint(1, 4))
+            nct = self._game_result_time(dt)
         elif self.status == "game_post_sample":
-            nct = dt
+            nct = self._game_post_sample_time(dt)
         return nct
 
     def make_contact(self, recorded_time, tropo_requester, skip_save=False):
@@ -223,9 +268,30 @@ class Participant(StampedModel):
             return es
         return None
 
-    def wake_up(self, first_contact_time, skip_save=False):
+    def wake_up(self, wakeup_time, skip_save=False):
+        self.next_contact_time = self.generate_contact_time(wakeup_time)
         self.status = 'baseline'
-        self.generate_contact_at(first_contact_time, skip_save)
+        if not skip_save:
+            self.save()
+        self.generate_contact_at(self.next_contact_time, skip_save)
+
+    def get_game_permission(self):
+        pass
+
+    def get_game_guess(self):
+        pass
+
+    def game_intersample(self):
+        pass
+
+    def game_reveal(self):
+        pass
+
+    def game_post_sample(self):
+        pass
+
+    def return_to_baseline(self):
+        pass
 
     def go_to_sleep(self, complete, skip_save=False):
         self.next_contact_time = None
@@ -233,6 +299,18 @@ class Participant(StampedModel):
             self.status = 'complete'
         if not skip_save:
             self.save()
+
+    def tropo_answer(self, incoming_msg, cur_time, tropo_req):
+        obj = self.current_contact_object()
+        logger.debug("Current object: %s" % obj)
+        try:
+            obj.answer(incoming_msg, cur_time)
+        except ResponseError as e:
+            logger.debug("ResponseError: %s" % e.message)
+            tropo_req.say(e.message)
+            return
+        # Other errors (AttributeError is a likely candidate) should just
+        # fall through -- we won't contact the ppt about them.
 
     def __unicode__(self):
         return 'Participant %s: %s, starts %s' % (
@@ -425,6 +503,10 @@ class HiLowGame(ParticipantExchange):
         blank=True,
         null=True)
 
+    result_reported_at = models.DateTimeField(
+        blank=True,
+        null=True)
+
     def message(self):
         return "We generated a number between 1 and 9. Guess if it's lower or higher than 5. (low/high)"
 
@@ -522,13 +604,11 @@ class TaskDay(StampedModel):
         """
         self.set_status_for_time(dt, skip_save)
         if self.is_game_day:
-            GAME_PADDING_SEC=150*60
+            GAME_PADDING_SEC=150*SEC_IN_MIN
             game_time = self.random_time_before_day_end(GAME_PADDING_SEC)
             self.participant.gamepermission_set.create(
                 scheduled_at=game_time)
-        self.participant.wake_up(
-            self.get_random_first_contact_time(),
-            skip_save)
+        self.participant.wake_up(dt, skip_save)
 
     def end_day(self, td, skip_save=False):
         self.set_status_for_time(td, skip_save)
@@ -541,12 +621,6 @@ class TaskDay(StampedModel):
         offset_sec = random.randint(0, available_time_sec)
         dt = self.earliest_contact + datetime.timedelta(seconds=offset_sec)
         return dt
-
-    def get_random_first_contact_time(self):
-        tdelta = datetime.timedelta(
-            minutes=random.randint(0,
-                self.participant.experiment.min_time_between_samples))
-        return self.earliest_contact + tdelta
 
     def is_last_task_day(self):
         last_task_day = self.participant.taskday_set.latest('task_day')

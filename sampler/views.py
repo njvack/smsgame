@@ -53,19 +53,7 @@ def incoming_message(request):
         response.write(t.RenderJson())
         return response
 
-    obj = ppt.current_contact_object()
-    logger.debug("Response object: %s" % obj)
-
-    try:
-        obj.answer(tm, datetime.datetime.now())
-    except models.ResponseError as exc:
-        logger.debug(exc)
-        t.say("Sorry, we didn't understand your response.")
-    except AttributeError as exc:
-        # Probably obj is None... nothing to answer.
-        logger.debug(exc)
-        t.hangup()
-
+    ppt.tropo_answer(tm, datetime.datetime.now(), t)
     response.write(t.RenderJson())
     return response
 
