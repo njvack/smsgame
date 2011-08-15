@@ -47,7 +47,21 @@ class ParticipantTest(TestCase):
         delta = datetime.timedelta(minutes=1)
         now = self.td_start+delta
         self.p1.generate_contact_at(now)
-        self.assertGreater(self.p1.experiencesample_set.count, 0)
+        self.assertGreater(self.p1.experiencesample_set.count(), 0)
+
+    def testNewestContactObjects(self):
+        p = self.p1
+        t = self.early
+        t2 = self.late
+        self.assertEqual(0, len(p.newest_contact_objects()))
+        p.experiencesample_set.create(scheduled_at=t)
+        self.assertEqual(1, len(p.newest_contact_objects()))
+        p.experiencesample_set.create(scheduled_at=t2)
+        self.assertEqual(1, len(p.newest_contact_objects()))
+        p.gamepermission_set.create(scheduled_at=t)
+        self.assertEqual(2, len(p.newest_contact_objects()))
+        p.hilowgame_set.create(scheduled_at=t)
+        self.assertEqual(3, len(p.newest_contact_objects()))
 
 
 class ExperienceSampleTest(TestCase):

@@ -188,11 +188,11 @@ class Participant(StampedModel):
         return nct
 
     def _game_intersample_time(self, dt):
-        nct = dt+datetime.timedelta(minutes=random.randint(1,4))
+        nct = dt+datetime.timedelta(minutes=random.randint(1, 4))
         return nct
 
     def _game_result_time(self, dt):
-        nct = dt+datetime.timedelta(minutes=random.randint(5,8))
+        nct = dt+datetime.timedelta(minutes=random.randint(5, 8))
         return nct
 
     def _game_post_sample_time(self, dt):
@@ -209,9 +209,9 @@ class Participant(StampedModel):
         if samples.count() == 0:
             pass
         elif rep_delta < 60*SEC_IN_MIN:
-            nct = dt+datetime.timedelta(minutes=random.randint(9,15))
+            nct = dt+datetime.timedelta(minutes=random.randint(9, 15))
         else:
-            nct = dt+datetime.timedelta(minutes=random.randint(18,28))
+            nct = dt+datetime.timedelta(minutes=random.randint(18, 28))
         return nct
 
     def generate_contact_time(self, dt):
@@ -259,14 +259,28 @@ class Participant(StampedModel):
             return 'sampler.views.request_baseline'
         return None
 
+    @property
+    def contact_sets(self):
+        return [
+            self.experiencesample_set,
+            self.gamepermission_set,
+            self.hilowgame_set]
+
+    def newest_contact_objects(self):
+        set_objects = [s.newest() for s in self.contact_sets]
+        objs = [o for o in set_objects if o]
+        objs.sort(key=lambda o: o.scheduled_at)
+        objs.reverse()
+        return objs
+
     def current_contact_object(self):
-        exp_samples = self.experiencesample_set.order_by("-scheduled_at")[:1]
-        if len(exp_samples) == 0:
-            return None
-        es = exp_samples[0]
-        if es.answered_at is None:
-            return es
-        return None
+        ncos = self.newest_contact_objects()
+        fco = None
+        if len(ncos) > 0:
+            fco = ncos[0]
+            if fco.answered_at is not None:
+                fco = None
+        return fco
 
     def wake_up(self, wakeup_time, skip_save=False):
         self.next_contact_time = self.generate_contact_time(wakeup_time)
@@ -309,8 +323,6 @@ class Participant(StampedModel):
             logger.debug("ResponseError: %s" % e.message)
             tropo_req.say(e.message)
             return
-        # Other errors (AttributeError is a likely candidate) should just
-        # fall through -- we won't contact the ppt about them.
 
     def __unicode__(self):
         return 'Participant %s: %s, starts %s' % (
