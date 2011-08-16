@@ -143,6 +143,20 @@ class ExperienceSampleTest(TestCase):
         self.es.save()
         self.assertIsNone(models.ExperienceSample.objects.newest())
 
+    def testScheduleAtReschedules(self):
+        pk = self.es.pk
+        es = self.p1.experiencesample_set.schedule_at(self.later)
+        self.assertEqual(pk, es.pk)
+        self.assertEqual(es.scheduled_at, self.later)
+
+    def testSchedulsAtCreates(self):
+        pk = self.es.pk
+        self.es.answered_at = self.now
+        self.es.save()
+        e2 = self.p1.experiencesample_set.schedule_at(self.later)
+        self.assertNotEqual(pk, e2.pk)
+
+
 class IncomingTextTest(TestCase):
 
     def setUp(self):

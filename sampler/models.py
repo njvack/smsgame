@@ -452,6 +452,15 @@ class ParticipantExchangeManager(models.Manager):
         except:
             return None
 
+    def schedule_at(self, dt):
+        cur_obj = self.newest_if_unanswered()
+        if cur_obj is not None:
+            cur_obj.scheduled_at = dt
+            cur_obj.save()
+        else:
+            cur_obj = self.create(scheduled_at=dt)
+        return cur_obj
+
 
 class ParticipantExchange(StampedModel):
 
