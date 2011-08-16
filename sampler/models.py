@@ -149,11 +149,6 @@ class Participant(StampedModel):
             range(self.experiment.day_count),
             self.experiment.game_count)
 
-    def generate_contact_from_status(self, status, *args, **kwargs):
-        skip_save = kwargs.get('skip_save')
-        data = self.STATUSES[status]
-        timing_fx = getattr(self, data['timing_fx'])
-
     def generate_contact_at(self, dt, skip_save=False):
         self.next_contact_time = dt
         sample = self.experiencesample_set.create(
