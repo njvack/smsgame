@@ -43,11 +43,48 @@ class ParticipantTest(TestCase):
         with self.assertRaises(ValidationError):
             p1.save()
 
-    def testGenerateContactAt(self):
-        delta = datetime.timedelta(minutes=1)
-        now = self.td_start+delta
-        self.p1.generate_contact_at(now)
+    def testGetOrGenerateContactBaseline(self):
+        self.p1.status = 'baseline'
+        self.p1.next_contact_time = self.td_start
+        self.p1.get_or_create_contact()
         self.assertGreater(self.p1.experiencesample_set.count(), 0)
+
+    def testGetOrGenerateContactIntersample(self):
+        self.p1.status = 'game_inter_sample'
+        self.p1.next_contact_time = self.td_start
+        self.p1.get_or_create_contact()
+        self.assertGreater(self.p1.experiencesample_set.count(), 0)
+
+    def testGetOrGenerateContactPostSample(self):
+        self.p1.status = 'game_post_sample'
+        self.p1.next_contact_time = self.td_start
+        self.p1.get_or_create_contact()
+        self.assertGreater(self.p1.experiencesample_set.count(), 0)
+
+    def testGetOrGenerateContactPermission(self):
+        self.assertEqual(self.p1.gamepermission_set.count(), 0)
+        self.p1.status = 'game_permission'
+        self.p1.next_contact_time = self.td_start
+        self.p1.get_or_create_contact()
+        self.assertGreater(self.p1.gamepermission_set.count(), 0)
+
+    def testGetOrGenerateContactPermission(self):
+        self.assertEqual(self.p1.gamepermission_set.count(), 0)
+        self.p1.status = 'game_permission'
+        self.p1.next_contact_time = self.td_start
+        self.p1.get_or_create_contact()
+        self.assertGreater(self.p1.gamepermission_set.count(), 0)
+
+    def testGetOrGenerateContactHiLow(self):
+        self.assertEqual(self.p1.hilowgame_set.count(), 0)
+        self.p1.status = 'game_guess'
+        self.p1.next_contact_time = self.td_start
+        self.p1.get_or_create_contact()
+        self.assertEqual(self.p1.hilowgame_set.count(), 1)
+        self.p1.status = 'game_result'
+        self.p1.next_contact_time = self.td_end
+        self.p1.get_or_create_contact()
+        self.assertEqual(self.p1.hilowgame_set.count(), 1)
 
     def testNewestContactObjects(self):
         p = self.p1
@@ -380,14 +417,6 @@ class TropoRequestTest(TestCase):
         self.assertIsNotNone(self.session_request.REQUEST)
         self.assertIsNotNone(self.sms_request.REQUEST)
         self.assertEqual("1", self.session_request.REQUEST['pk'])
-
-    def testSetsPath(self):
-        self.assertEqual("/test/", self.session_request.path)
-        self.assertEqual("/test/", self.session_request.path_info)
-        self.assertEqual(
-            settings.TROPO_INCOMING_TEXT_PATH, self.sms_request.path)
-        self.assertEqual(
-            settings.TROPO_INCOMING_TEXT_PATH, self.sms_request.path_info)
 
     def testTextsGenerateToFrom(self):
         self.assertIsNotNone(self.sms_request.call_to)

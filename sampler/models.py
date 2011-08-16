@@ -150,12 +150,22 @@ class Participant(StampedModel):
             range(self.experiment.day_count),
             self.experiment.game_count)
 
-    def generate_contact_at(self, dt, skip_save=False):
-        self.next_contact_time = dt
-        sample = self.experiencesample_set.create(
-            scheduled_at=self.next_contact_time)
-        if not skip_save:
-            self.save()
+    def get_or_create_contact(self):
+        obj = None
+        if (
+            self.status == 'baseline' or
+            self.status == 'game_inter_sample' or
+            self.status == 'game_post_sample'):
+
+            obj = self.experiencesample_set.schedule_at(self.next_contact_time)
+        elif (self.status == 'game_permission'):
+            obj = self.gamepermission_set.schedule_at(self.next_contact_time)
+        elif (self.status == 'game_guess'):
+            obj = self.hilowgame_set.schedule_at(self.next_contact_time)
+        elif (self.status == 'game_result'):
+            obj = self.hilowgame_set.newest()
+
+        return obj
 
     def _sleeping_contact_time(self, dt):
         delta = datetime.timedelta(minutes=random.randint(
@@ -223,6 +233,15 @@ class Participant(StampedModel):
             nct = self._game_post_sample_time(dt)
         return nct
 
+    def generate_contacts_and_update_status(self, dt):
+        logger.debug("%s generating contacts at %s -- next_contact: %s" %
+            (self, dt, self.next_contact_time))
+        if self.next_contact_time is not None:
+            return
+        self.next_contact_time = self.generate_contact_time(dt)
+        self.fire_scheduled_state_transitions()
+        return self.get_or_create_contact()
+
     def fire_scheduled_state_transitions(self, skip_save=False):
         # Only a few statuses get changed this way -- others result from
         # TaskDays starting/ending and responses to texts.
@@ -242,7 +261,16 @@ class Participant(StampedModel):
         # change our next_contact time and set our status to 'game_permission'
         gp = self.gamepermission_set.newest_if_unanswered()
         if gp and self.next_contact_time > gp.scheduled_at:
+            logger.debug("%s: baseline -> game_permission" % self)
             self.status = "game_permission"
+            self.next_contact_time = gp.scheduled_at
+            # There will also be an ExperienceSample wating out there --
+            # kill it
+            self.experiencesample_set.filter(
+                scheduled_at__gte=self.next_contact_time).filter(
+                answered_at=None).update(deleted_at=datetime.datetime.now())
+        else:
+            logger.debug("%s: staying baseline" % self)
 
     def _game_permission_transition(self):
         """
@@ -255,7 +283,14 @@ class Participant(StampedModel):
             task_day=self.next_contact_time.date())
         if ((task_day.latest_contact - self.next_contact_time).seconds <
             GAME_PADDING_SEC):
+            logger.debug("%s: game_permission -> baseline" % self)
             self.status = "baseline"
+            # And delete our GamePermission
+            gps = self.gamepermission_set.newest_unanswered()
+            gps.deleted_at = datetime.datetime.now()
+            gps.save()
+        else:
+            logger.debug("%s: staying game_permission" % self)
 
     def _game_post_sample_transition(self):
         """
@@ -267,17 +302,17 @@ class Participant(StampedModel):
         hlg = self.hilowgame_set.newest()
         if ((self.next_contact_time - hlg.result_reported_at).seconds <
             POST_SAMPLE_PERIOD_SEC):
+            logger.debug("%s: game_permission -> baseline" % self)
             self.status = "baseline"
+        else:
+            logger.debug("%s: staying game_permission" % self)
 
     def make_contact(self, recorded_time, tropo_requester, skip_save=False):
         """
         Actually makes a request for contact. Sets the current contact object
         as marked sent, clears self.next_contact_time.
         """
-        viewname = self.current_contact_view()
-        path = reverse(viewname)
         tropo_requester.request_session({
-            'path': path,
             'pk': self.pk})
 
         obj = self.current_contact_object()
@@ -285,15 +320,6 @@ class Participant(StampedModel):
         self.next_contact_time = None
         if not skip_save:
             self.save()
-
-    def current_contact_view(self):
-        """ Returns something like 'sampler.views.request_baseline'
-        Always 'sampler.views.request_baseline' or None now
-        """
-        es = self.current_contact_object()
-        if es is not None:
-            return 'sampler.views.request_baseline'
-        return None
 
     @property
     def contact_sets(self):
@@ -319,19 +345,14 @@ class Participant(StampedModel):
         return fco
 
     def wake_up(self, wakeup_time, skip_save=False):
+        if not self.status == 'sleeping':
+            return
+        logger.debug("%s: sleeping -> baseline" % self)
         self.next_contact_time = self.generate_contact_time(wakeup_time)
         self.status = 'baseline'
         if not skip_save:
             self.save()
-        self.generate_contact_at(self.next_contact_time, skip_save)
-
-    def get_game_permission(self, dt, skip_save=False):
-        # When we're transitioning here, there will already be an
-        # ExperienceSample waiting out there, unanswered. Find it and
-        # set deleted_at.
-        count = self.experiencesample_set.filter(
-            scheduled_at__gte=dt).filter(
-            answered_at=None).update(deleted_at=dt)
+        self.get_or_create_contact()
 
     def get_game_guess(self):
         pass
@@ -349,9 +370,13 @@ class Participant(StampedModel):
         pass
 
     def go_to_sleep(self, complete, skip_save=False):
+        prev_status = self.status
         self.next_contact_time = None
         if complete:
             self.status = 'complete'
+        else:
+            self.status = 'sleeping'
+        logger.debug("%s: %s -> %s" % (self, prev_status, self.status))
         if not skip_save:
             self.save()
 
@@ -366,8 +391,8 @@ class Participant(StampedModel):
             return
 
     def __unicode__(self):
-        return 'Participant %s: %s, starts %s' % (
-            self.pk, self.phone_number, self.start_date)
+        return 'Participant %s (%s): %s' % (
+            self.pk, self.status, self.phone_number)
 
     def save(self, *args, **kwargs):
         self.clean_fields()

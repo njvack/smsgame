@@ -20,10 +20,8 @@ def tropo(request):
     logger.debug("Tropo request: "+request.raw_post_data)
     treq = TropoRequest(request.raw_post_data)
     logger.debug(treq.method)
-    logger.debug(treq.path)
     logger.debug(treq.REQUEST)
 
-    resolved = resolve(treq.path)
     logger.debug(resolved)
     logger.debug(resolved.func)
     return resolved.func(treq, *resolved.args, **resolved.kwargs)
@@ -94,7 +92,6 @@ class TropoRequest(object):
         self._s = self.data.get("session") or {}
         self.__set_method()
         self.__set_parameters()
-        self.__set_path()
         self.__set_to_from()
         self.__set_text_content()
 
@@ -106,13 +103,6 @@ class TropoRequest(object):
 
     def __set_parameters(self):
         self.REQUEST = self._s.get("parameters") or {}
-
-    def __set_path(self):
-        if self.method == "POST":
-            self.path = self.REQUEST.get(settings.TROPO_PATH_PARAM)
-        elif self.method == "TEXT":
-            self.path = settings.TROPO_INCOMING_TEXT_PATH
-        self.path_info = self.path
 
     def __set_to_from(self):
         self.call_to = self._s.get("to") or {}

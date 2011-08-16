@@ -32,12 +32,7 @@ class Command(NoArgsCommand):
         for td in models.TaskDay.active.all():
             logger.debug('Running %s' % td)
             ppt = td.participant
-            if ppt.next_contact_time is None:
-                logger.debug("Setting next contact time for %s" % ppt)
-                nct = ppt.generate_contact_time(now)
-                ppt.generate_contact_at(nct)
-            logger.debug("%s next contact time: %s" %
-                (ppt, ppt.next_contact_time))
+            ppt.generate_contacts_and_update_status(now)
 
         # Finally finally, grab all the participants with scheduled contacts
         # and have them do their contacty-magic.
