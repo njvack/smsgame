@@ -18,6 +18,7 @@ SEC_IN_MIN = 60
 GAME_PADDING_SEC = 150 * SEC_IN_MIN
 POST_SAMPLE_PERIOD_SEC = 120 * SEC_IN_MIN
 
+
 class PhoneNumber(object):
 
     description = "A 10-digit US telephone number"
@@ -261,7 +262,7 @@ class Participant(StampedModel):
         If the highlow game was reported more than POST_SAMPLE_PERIOD_SEC
         ago, go back to baseline
         """
-        if not self.status  == "game_post_sample":
+        if not self.status == "game_post_sample":
             return
         hlg = self.hilowgame_set.newest()
         if ((self.next_contact_time - hlg.result_reported_at).seconds <
@@ -324,8 +325,13 @@ class Participant(StampedModel):
             self.save()
         self.generate_contact_at(self.next_contact_time, skip_save)
 
-    def get_game_permission(self):
-        pass
+    def get_game_permission(self, dt, skip_save=False):
+        # When we're transitioning here, there will already be an
+        # ExperienceSample waiting out there, unanswered. Find it and
+        # set deleted_at.
+        count = self.experiencesample_set.filter(
+            scheduled_at__gte=dt).filter(
+            answered_at=None).update(deleted_at=dt)
 
     def get_game_guess(self):
         pass
@@ -431,6 +437,9 @@ class ResponseError(ValueError):
 
 class ParticipantExchangeManager(models.Manager):
 
+    def active(self):
+        return self.get_query_set().filter(deleted_at=None)
+
     def newest_if_unanswered(self):
         pe = self.newest()
         if pe and pe.answered_at is None:
@@ -439,7 +448,7 @@ class ParticipantExchangeManager(models.Manager):
 
     def newest(self):
         try:
-            return self.latest('created_at')
+            return self.active().latest('created_at')
         except:
             return None
 
@@ -465,6 +474,10 @@ class ParticipantExchange(StampedModel):
         blank=True)
 
     answered_at = models.DateTimeField(
+        null=True,
+        blank=True)
+
+    deleted_at = models.DateTimeField(
         null=True,
         blank=True)
 

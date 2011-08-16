@@ -109,9 +109,7 @@ class ExperienceSampleTest(TestCase):
             experiment=self.exp, start_date=self.today,
             phone_number='6085551212')
 
-        self.es = models.ExperienceSample(
-            participant=self.p1,
-            scheduled_at=self.now)
+        self.es = self.p1.experiencesample_set.create(scheduled_at=self.now)
 
     def testAnswerSetsAnsweredAt(self):
         self.es.answer("15", self.later, True)
@@ -138,6 +136,12 @@ class ExperienceSampleTest(TestCase):
         self.assertRaises(models.ResponseError, self.es.answer,
             "a", self.later, True)
 
+    def testDeletedAtExcludesFromNewest(self):
+        self.assertEqual(self.es, models.ExperienceSample.objects.newest())
+        self.assertEqual(self.es, models.ExperienceSample.objects.active()[0])
+        self.es.deleted_at = self.now
+        self.es.save()
+        self.assertIsNone(models.ExperienceSample.objects.newest())
 
 class IncomingTextTest(TestCase):
 
