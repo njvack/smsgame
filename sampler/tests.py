@@ -566,7 +566,8 @@ class SecheduleAndSendTest(TestCase):
             'now': self.td1.earliest_contact,
             'tropo_reqester': mocks.OutgoingTropoSession()}
 
-        return dict(defaults.items() + kwargs.items())
+        defaults.update(kwargs)
+        return defaults
 
     def testCommandRuns(self):
         self.cmd.handle_noargs(**self.opts())
