@@ -283,7 +283,7 @@ class Participant(StampedModel):
             logger.debug("%s: game_permission -> baseline" % self)
             self.status = "baseline"
             # And delete our GamePermission
-            gps = self.gamepermission_set.newest_unanswered()
+            gps = self.gamepermission_set.newest_if_unanswered()
             gps.deleted_at = datetime.datetime.now()
             gps.save()
         else:

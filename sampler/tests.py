@@ -604,3 +604,16 @@ class SecheduleAndSendTest(TestCase):
         self.cmd.handle_noargs(**self.opts())
         p = pf(pk=self.p1.pk)
         self.assertEqual("game_permission", p.status)
+
+    def testGameReturnsToBaseline(self):
+        p = self.p1
+        pf = models.Participant.objects.get
+        p.status = "game_permission"
+        p.save()
+        gp = p.gamepermission_set.create(
+            scheduled_at=self.td1.earliest_contact)
+        not_quite_end = self.td1.latest_contact-datetime.timedelta(minutes=60)
+
+        self.cmd.handle_noargs(**self.opts(now=not_quite_end))
+        p = pf(pk=self.p1.pk)
+        self.assertEqual("baseline", p.status)
