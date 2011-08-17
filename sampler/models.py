@@ -105,20 +105,28 @@ class Participant(StampedModel):
         max_length=255,
         unique=True)
 
-    STATUSES = (
-        "sleeping",
-        "baseline",
-        "game_permission",
-        "game_guess",
-        "game_inter_sample",
-        "game_result",
-        "game_post_sample",
-        "complete")
+    STATUSES = {
+        "sleeping": {
+            'time_fx': '_sleeping_contact_time'},
+        "baseline": {
+            'time_fx': '_baseline_contact_time'},
+        "game_permission": {
+            'time_fx': '_game_permission_time'},
+        "game_guess": {
+            'time_fx': '_game_guess_time'},
+        "game_inter_sample": {
+            'time_fx': '_game_intersample_time'},
+        "game_result": {
+            'time_fx': '_game_result_time'},
+        "game_post_sample": {
+            'time_fx': '_game_post_sample_time'},
+        "complete": {
+            'time_fx': None}}
 
     status = models.CharField(
         max_length=20,
-        default=STATUSES[0],
-        validators=[validators.IncludesValidator(STATUSES)])
+        default='sleeping',
+        validators=[validators.IncludesValidator(STATUSES.keys())])
 
     start_date = models.DateField()
 
@@ -185,6 +193,9 @@ class Participant(StampedModel):
             nct = nct+datetime.timedelta(minutes=15)
         return nct
 
+    def _game_guess_time(self, dt):
+        return dt
+
     def _game_intersample_time(self, dt):
         nct = dt+datetime.timedelta(minutes=random.randint(1, 4))
         return nct
@@ -214,21 +225,10 @@ class Participant(StampedModel):
 
     def generate_contact_time(self, dt):
 
-        nct = None
-        if self.status == "sleeping":
-            nct = self._sleeping_contact_time(dt)
-        elif self.status == "baseline":
-            nct = self._baseline_contact_time(dt)
-        elif self.status == "game_permission":
-            nct = self._game_permission_time(dt)
-        elif self.status == "game_guess":
-            nct = dt
-        elif self.status == "game_inter_sample":
-            nct = self._game_intersample_time(dt)
-        elif self.status == "game_result":
-            nct = self._game_result_time(dt)
-        elif self.status == "game_post_sample":
-            nct = self._game_post_sample_time(dt)
+        time_fx_name = self.STATUSES[self.status]['time_fx']
+        if time_fx_name is None:
+            logger.info("Time fx name is none!")
+        nct = getattr(self, time_fx_name)(dt)
         return nct
 
     def generate_contacts_and_update_status(self, dt):
