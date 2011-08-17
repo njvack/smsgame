@@ -340,6 +340,8 @@ class Participant(StampedModel):
             fco = ncos[0]
             if fco.answered_at is not None:
                 fco = None
+        if self.status == 'game_result':
+            fco = self.hilowgame_set.newest()
         return fco
 
     def wake_up(self, wakeup_time, skip_save=False):

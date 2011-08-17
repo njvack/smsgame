@@ -135,6 +135,16 @@ class ParticipantTest(TestCase):
         hlg4.save()
         self.assertIsNone(p.current_contact_object())
 
+    def testCurrentContactObjectWithResult(self):
+        p = self.p1
+        t1 = self.early
+        hlg1 = p.hilowgame_set.create(scheduled_at=t1)
+        hlg1.answered_at = t1
+        hlg1.save()
+        self.assertIsNone(p.current_contact_object())
+        p.status = 'game_result'
+        self.assertEqual(hlg1, p.current_contact_object())
+
     def testBaselineTransition(self):
         p = self.p1
         p.status = 'baseline'
