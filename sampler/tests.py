@@ -12,6 +12,8 @@ from . import validators
 from . import views
 from sampler.management.commands import schedule_and_send_messages
 
+from tropo import Tropo
+
 
 class ParticipantTest(TestCase):
 
@@ -141,6 +143,40 @@ class ParticipantTest(TestCase):
         p.save()
         p._baseline_transition()
         self.assertEqual(p.status, 'game_permission')
+
+    def testAnswerChangesToGameGuess(self):
+        p = self.p1
+        t = Tropo()
+        p.status = 'game_permission'
+        p.gamepermission_set.create(scheduled_at=self.early)
+        p.tropo_answer("n", self.early, t, True)
+        self.assertEqual("game_permission", p.status)
+        p.tropo_answer("y", self.early, t, True)
+        self.assertEqual("game_guess", p.status)
+
+    def testAnswerChangesToGameIntersample(self):
+        p = self.p1
+        t = Tropo()
+        p.status = 'game_guess'
+        p.hilowgame_set.create(scheduled_at=self.early)
+        p.tropo_answer("low", self.early, t, True)
+        self.assertEqual('game_inter_sample', p.status)
+
+    def testFailedPermissionAnswerDoesntChangeStatus(self):
+        p = self.p1
+        t = Tropo()
+        p.status = 'game_permission'
+        p.gamepermission_set.create(scheduled_at=self.early)
+        p.tropo_answer("", self.early, t, True)
+        self.assertEqual("game_permission", p.status)
+
+    def testFailedGuessAnswerDoesntChangeStatus(self):
+        p = self.p1
+        t = Tropo()
+        p.status = 'game_guess'
+        p.hilowgame_set.create(scheduled_at=self.early)
+        p.tropo_answer("", self.early, t, True)
+        self.assertEqual('game_guess', p.status)
 
 
 class ExperienceSampleTest(TestCase):

@@ -352,21 +352,6 @@ class Participant(StampedModel):
             self.save()
         self.get_or_create_contact()
 
-    def get_game_guess(self):
-        pass
-
-    def game_intersample(self):
-        pass
-
-    def game_reveal(self):
-        pass
-
-    def game_post_sample(self):
-        pass
-
-    def return_to_baseline(self):
-        pass
-
     def go_to_sleep(self, complete, skip_save=False):
         prev_status = self.status
         self.next_contact_time = None
@@ -378,17 +363,28 @@ class Participant(StampedModel):
         if not skip_save:
             self.save()
 
-    def tropo_answer(self, incoming_msg, cur_time, tropo_req):
+    def tropo_answer(self, incoming_msg, cur_time, tropo_req, skip_save=False):
         obj = self.current_contact_object()
         logger.debug("Current object: %s" % obj)
         try:
             obj.answer(incoming_msg, cur_time)
+            if type(obj) == GamePermission:
+                # No is a valid answer, but doesn't change our status
+                if obj.permissed:
+                    self.status = "game_guess"
+            elif type(obj) == HiLowGame:
+                # In this case, they definitely made a guess, we need to go
+                # to inter_sample
+                self.status = "game_inter_sample"
         except ResponseError as e:
             logger.debug("ResponseError: %s" % e)
             tropo_req.say(e.message)
         except Exception as e:
             logger.debug(e)
             tropo_req.hangup()
+
+        if not skip_save:
+            self.save()
 
     def __unicode__(self):
         return 'Participant %s (%s): %s' % (
