@@ -221,6 +221,46 @@ class GamePermissionTest(TestCase):
         self.assertRaises(err, self.gp.answer, "foo", self.now, True)
 
 
+class HiLowGameTest(TestCase):
+
+    def setUp(self):
+        self.now = datetime.datetime(2011, 7, 1, 9, 30)
+        self.hlg = models.HiLowGame()
+
+    def testGeneratesDefault(self):
+        self.assertIsNotNone(self.hlg.correct_guess)
+
+    def testAnswerWithNumber(self):
+        hlg = self.hlg
+        self.assertIsNone(hlg.guessed_low)
+        hlg.answer('high', self.now, True)
+        self.assertFalse(hlg.guessed_low)
+        hlg.answer('low', self.now, True)
+        self.assertTrue(hlg.guessed_low)
+        hlg.answer('H', self.now, True)
+        self.assertFalse(hlg.guessed_low)
+        hlg.answer('L', self.now, True)
+        self.assertTrue(hlg.guessed_low)
+
+    def testBadAnswer(self):
+        err = models.ResponseError
+        self.assertRaises(err, self.hlg.answer, "", self.now, True)
+        self.assertRaises(err, self.hlg.answer, "foo", self.now, True)
+
+    def testGuessWasCorrect(self):
+        hlg = self.hlg
+        hlg.correct_guess = 1
+        hlg.answer("low", self.now, True)
+        self.assertTrue(hlg.guess_was_correct)
+        hlg.answer("high", self.now, True)
+        self.assertFalse(hlg.guess_was_correct)
+        hlg.correct_guess = 9
+        hlg.answer("high", self.now, True)
+        self.assertTrue(hlg.guess_was_correct)
+        hlg.answer("low", self.now, True)
+        self.assertFalse(hlg.guess_was_correct)
+
+
 class IncomingTextTest(TestCase):
 
     def setUp(self):

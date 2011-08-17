@@ -593,6 +593,9 @@ class GamePermission(ParticipantExchange):
         except:
             raise ResponseError("We didn't understand your repsonse. Please enter y or n.")
 
+        if not skip_save:
+            self.save()
+
 
 def random_hi_low():
     num = random.randint(1, 8)
@@ -614,15 +617,38 @@ class HiLowGame(ParticipantExchange):
         blank=True,
         null=True)
 
+    def answer(self, text, answered_at, skip_save=False):
+        """
+        Allow any text that has a h or l in it.
+        """
+        matches = re.match(
+            r"""
+            [^hl]*
+            (?P<hilow_char>[hl])
+            [^hl]*
+            """, text, (re.I | re.VERBOSE))
+        try:
+            match = matches.group("hilow_char").lower()
+            self.guessed_low = (match == "l")
+        except:
+            raise ResponseError("We didn't understand your repsonse. Please enter low or high.")
+
+        if not skip_save:
+            self.save()
+
     def message(self):
         return "We generated a number between 1 and 9. Guess if it's lower or higher than 5. (low/high)"
 
-    def result_message(self):
+    @property
+    def guess_was_correct(self):
         is_low = self.correct_guess < 5
-        if (is_low == guessed_low):
+        return (is_low == self.guessed_low)
+
+    def result_message(self):
+        if self.guess_was_correct:
             msg = "The number was %s. You guessed right! $20 has been added to your account." % self.correct_guess
         else:
-            msg = "The number was %s. You guessed wrong. No money additional money has been added to your account."
+            msg = "The number was %s. You guessed wrong. No money additional money has been added to your account." % self.correct_guess
         return msg
 
 
