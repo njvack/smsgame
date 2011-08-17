@@ -234,9 +234,8 @@ class Participant(StampedModel):
     def generate_contacts_and_update_status(self, dt):
         logger.debug("%s generating contacts at %s -- next_contact: %s" %
             (self, dt, self.next_contact_time))
-        if self.next_contact_time is not None:
-            return
-        self.next_contact_time = self.generate_contact_time(dt)
+        if self.next_contact_time is None:
+            self.next_contact_time = self.generate_contact_time(dt)
         self.fire_scheduled_state_transitions()
         return self.get_or_create_contact()
 
@@ -258,7 +257,7 @@ class Participant(StampedModel):
         # If there's a GamePermission coming before our next_contact_time,
         # change our next_contact time and set our status to 'game_permission'
         gp = self.gamepermission_set.newest_if_unanswered()
-        if gp and self.next_contact_time > gp.scheduled_at:
+        if gp and self.next_contact_time >= gp.scheduled_at:
             logger.debug("%s: baseline -> game_permission" % self)
             self.status = "game_permission"
             self.next_contact_time = gp.scheduled_at

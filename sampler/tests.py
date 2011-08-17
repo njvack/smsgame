@@ -1,10 +1,3 @@
-"""
-This file demonstrates writing tests using the unittest module. These will pass
-when you run "manage.py test".
-
-Replace this with more appropriate tests for your application.
-"""
-
 from django.test import TestCase
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
@@ -14,6 +7,7 @@ import random
 import datetime
 
 from . import models
+from . import mocks
 from . import validators
 from . import views
 from sampler.management.commands import schedule_and_send_messages
@@ -42,6 +36,20 @@ class ParticipantTest(TestCase):
         p1.status = "crazy"
         with self.assertRaises(ValidationError):
             p1.save()
+
+    def testGenOrUpdateStatusBaseline(self):
+        self.p1.status = 'baseline'
+        self.p1.next_contact_time = self.td_start
+        self.p1.gamepermission_set.create(scheduled_at=self.td_start)
+        self.p1.generate_contacts_and_update_status(self.td_start)
+        self.assertEqual("game_permission", self.p1.status)
+
+    def testBaselineToPermissionTransition(self):
+        self.p1.status = 'baseline'
+        self.p1.next_contact_time = self.td_start
+        self.p1.gamepermission_set.create(scheduled_at=self.td_start)
+        self.p1.fire_scheduled_state_transitions()
+        self.assertEqual("game_permission", self.p1.status)
 
     def testGetOrGenerateContactBaseline(self):
         self.p1.status = 'baseline'
@@ -553,35 +561,46 @@ class SecheduleAndSendTest(TestCase):
             end_time=self.end_time)
         self.cmd = schedule_and_send_messages.Command()
 
-    def test_command_runs(self):
-        opts = {'now': self.td1.earliest_contact}
-        self.cmd.handle_noargs(**opts)
+    def opts(self, *args, **kwargs):
+        defaults = {
+            'now': self.td1.earliest_contact,
+            'tropo_reqester': mocks.OutgoingTropoSession()}
 
-    def test_sets_ppt_next_contact_time(self):
+        return dict(defaults.items() + kwargs.items())
+
+    def testCommandRuns(self):
+        self.cmd.handle_noargs(**self.opts())
+
+    def testSetsPptNextContactTime(self):
         self.assertIsNone(self.p1.next_contact_time)
-        opts = {'now': self.td1.earliest_contact}
-        self.cmd.handle_noargs(**opts)
+        self.cmd.handle_noargs(**self.opts())
         p = models.Participant.objects.get(pk=self.p1.pk)
         self.assertIsNotNone(p.next_contact_time)
-    
-    def test_wakes_up_and_sleeps(self):
+
+    def testWakeupSleepAndComplete(self):
+        pf = models.Participant.objects.get
         self.assertEqual(self.p1.status, "sleeping")
-        opts = {'now': self.td1.earliest_contact}
-        self.cmd.handle_noargs(**opts)
-        p = models.Participant.objects.get(pk=self.p1.pk)
+        self.cmd.handle_noargs(**self.opts())
+        p = pf(pk=self.p1.pk)
         self.assertEqual(p.status, "baseline")
 
-        opts['now'] = self.td1.latest_contact
-        self.cmd.handle_noargs(**opts)
-        p = models.Participant.objects.get(pk=self.p1.pk)
+        self.cmd.handle_noargs(**self.opts(now=self.td1.latest_contact))
+        p = pf(pk=self.p1.pk)
         self.assertEqual(p.status, "sleeping")
 
-        opts['now'] = self.td2.earliest_contact
-        self.cmd.handle_noargs(**opts)
-        p = models.Participant.objects.get(pk=self.p1.pk)
+        self.cmd.handle_noargs(**self.opts(now=self.td2.earliest_contact))
+        p = pf(pk=self.p1.pk)
         self.assertEqual(p.status, "baseline")
 
-        opts['now'] = self.td2.latest_contact
-        self.cmd.handle_noargs(**opts)
-        p = models.Participant.objects.get(pk=self.p1.pk)
+        self.cmd.handle_noargs(**self.opts(now=self.td2.latest_contact))
+        p = pf(pk=self.p1.pk)
         self.assertEqual(p.status, "complete")
+
+    def testStartsGamePermission(self):
+        p = self.p1
+        pf = models.Participant.objects.get
+        gp = p.gamepermission_set.create(
+            scheduled_at=self.td1.earliest_contact)
+        self.cmd.handle_noargs(**self.opts())
+        p = pf(pk=self.p1.pk)
+        self.assertEqual("game_permission", p.status)
