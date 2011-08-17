@@ -22,9 +22,12 @@ def tropo(request):
     logger.debug(treq.method)
     logger.debug(treq.REQUEST)
 
-    logger.debug(resolved)
-    logger.debug(resolved.func)
-    return resolved.func(treq, *resolved.args, **resolved.kwargs)
+    if treq.is_incoming:
+        logger.debug("Processing incoming message")
+        return incoming_message(treq)
+    else:
+        logger.debug("Processing outgoing message")
+        return outgoing_message(treq)
 
 
 def incoming_message(request):
@@ -56,12 +59,12 @@ def incoming_message(request):
     return response
 
 
-def request_baseline(request):
+def outgoing_message(request):
     pk = request.REQUEST['pk']
     ppt = get_object_or_404(models.Participant, pk=pk)
     t = Tropo()
+    ppt.tropo_send_message()
     t.call(ppt.phone_number.for_tropo, channel="TEXT")
-    t.say("Enter how much positive emotion (1-9) and negative emotion (1-9) you are feeling right now.")
     t.hangup()
     response = HttpResponse(content_type='applicaion/json')
     response.write(t.RenderJson())
@@ -94,6 +97,10 @@ class TropoRequest(object):
         self.__set_parameters()
         self.__set_to_from()
         self.__set_text_content()
+
+    @property
+    def is_incoming(self):
+        return "to" in self._s
 
     def __set_method(self):
         self.method = "POST"

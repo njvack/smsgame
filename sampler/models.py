@@ -386,9 +386,11 @@ class Participant(StampedModel):
         try:
             obj.answer(incoming_msg, cur_time)
         except ResponseError as e:
-            logger.debug("ResponseError: %s" % e.message)
+            logger.debug("ResponseError: %s" % e)
             tropo_req.say(e.message)
-            return
+        except Exception as e:
+            logger.debug(e)
+            tropo_req.hangup()
 
     def __unicode__(self):
         return 'Participant %s (%s): %s' % (
@@ -452,12 +454,7 @@ class Experiment(StampedModel):
 
 
 class ResponseError(ValueError):
-
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
+    pass
 
 
 class ParticipantExchangeManager(models.Manager):
@@ -555,7 +552,7 @@ class ExperienceSample(ParticipantExchange):
             self.positive_emotion = matches.group('positive_emotion')
             self.negative_emotion = matches.group('negative_emotion')
         except Exception as exc:
-            raise ResponseError("Could not parse %s" % text)
+            raise ResponseError("We didn't understand your response. Please enter two numbers between 1 and 9.")
 
         self.answered_at = answered_at
         if not skip_save:
