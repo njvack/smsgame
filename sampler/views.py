@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.core.urlresolvers import reverse, resolve
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 import logging
@@ -14,9 +13,6 @@ from . import models
 
 
 def tropo(request):
-    # This method will take an HttpRequest from Tropo, create a TropoRequest
-    # object, and then route it using resolve()
-
     logger.debug("Tropo request: "+request.raw_post_data)
     treq = TropoRequest(request.raw_post_data)
     logger.debug(treq.method)
