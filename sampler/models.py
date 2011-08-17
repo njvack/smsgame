@@ -117,9 +117,11 @@ class Participant(StampedModel):
         "game_guess": {
             'time_fx': '_game_guess_time', },
         "game_inter_sample": {
-            'time_fx': '_game_intersample_time', },
+            'time_fx': '_game_intersample_time',
+            'send_handler': '_game_inter_sample_send'},
         "game_result": {
-            'time_fx': '_game_result_time', },
+            'time_fx': '_game_result_time',
+            'send_handler': '_game_result_send'},
         "game_post_sample": {
             'time_fx': '_game_post_sample_time', },
         "complete": {}}
@@ -305,6 +307,24 @@ class Participant(StampedModel):
         else:
             logger.debug("%s: staying game_permission" % self)
 
+    def _game_inter_sample_send(self, dt, tropo_obj):
+        es = self.experiencesample_set.newest_if_unanswered()
+        if es is None:
+            logger.warn("Warning: No experience sample for inter_sample!")
+        else:
+            tropo_obj.say(es.message())
+        self.status = "game_result"
+
+    def _game_result_send(self, dt, tropo_obj):
+        hlg = self.hilowgame_set.newest()
+        if hlg is None:
+            logger.warn("Warning: no hilowgame!")
+        else:
+            tropo_obj.say(hlg.result_message())
+            hlg.result_reported_at = dt
+            hlg.save()
+        self.status = "game_post_sample"
+
     def make_contact(self, recorded_time, tropo_objuester, skip_save=False):
         """
         Actually makes a request for contact. Sets the current contact object
@@ -385,6 +405,16 @@ class Participant(StampedModel):
             logger.debug(e)
             tropo_obj.hangup()
 
+        if not skip_save:
+            self.save()
+
+    def tropo_send_message(self, cur_time, tropo_obj, skip_save=False):
+        self.next_contact_time = None
+        handler_fx = self.STATUSES[self.status].get('send_handler')
+        logger.debug("Status: %s, send_handler: %s" %
+            (self.status, handler_fx))
+        if handler_fx is not None:
+            getattr(self, handler_fx)(cur_time, tropo_obj)
         if not skip_save:
             self.save()
 

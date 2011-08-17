@@ -188,6 +188,33 @@ class ParticipantTest(TestCase):
         p.tropo_answer("", self.early, t, True)
         self.assertEqual('game_guess', p.status)
 
+    def testSendingClearsNextContactTime(self):
+        p = self.p1
+        t = Tropo()
+        p.next_contact_time=self.early
+        p.experiencesample_set.create(scheduled_at=self.early)
+        p.tropo_send_message(self.early, t, True)
+        self.assertIsNone(p.next_contact_time)
+
+    def testSendingChangesStatusFromIntersampleToResult(self):
+        p = self.p1
+        p.status = "game_inter_sample"
+        t = Tropo()
+        p.next_contact_time=self.early
+        p.experiencesample_set.create(scheduled_at=self.early)
+        p.tropo_send_message(self.early, t, True)
+        self.assertEqual('game_result', p.status)
+
+    def testSendingChangesStatusFromResultToPostSample(self):
+        p = self.p1
+        p.status = "game_result"
+        t = Tropo()
+        p.next_contact_time=self.early
+        p.hilowgame_set.create(scheduled_at=self.early)
+        p.tropo_send_message(self.early, t, True)
+        self.assertEqual('game_post_sample', p.status)
+        self.assertIsNotNone(p.hilowgame_set.newest().result_reported_at)
+
 
 class ExperienceSampleTest(TestCase):
 
