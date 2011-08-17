@@ -742,7 +742,7 @@ class TaskDay(StampedModel):
 
     def end_day(self, td, skip_save=False):
         self.set_status_for_time(td, skip_save)
-        complete = self.is_last_task_day
+        complete = self.is_last_task_day()
         self.participant.go_to_sleep(complete, skip_save)
 
     def random_time_before_day_end(self, before_end_sec):

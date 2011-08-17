@@ -539,23 +539,49 @@ class SecheduleAndSendTest(TestCase):
         self.p1 = models.Participant.objects.create(
             experiment=self.exp, start_date=self.today,
             phone_number='6085551212')
-        self.early = datetime.datetime(2011, 7, 1, 8, 30)
-        self.td_start = datetime.datetime(2011, 7, 1, 9, 30)
-        self.td_end = datetime.datetime(2011, 7, 1, 19, 00)
-        self.late = datetime.datetime(2011, 7, 1, 20, 00)
+        self.today = datetime.date(2011, 7, 1)
+        self.tomorrow = datetime.date(2011, 7, 2)
+        self.start_time = datetime.time(8, 30)
+        self.end_time = datetime.time(19, 00)
         self.td1 = self.p1.taskday_set.create(
-            task_day=self.td_start.date(),
-            start_time=self.td_start.time(),
-            end_time=self.td_end.time())
+            task_day=self.today,
+            start_time=self.start_time,
+            end_time=self.end_time)
+        self.td2 = self.p1.taskday_set.create(
+            task_day=self.tomorrow,
+            start_time=self.start_time,
+            end_time=self.end_time)
         self.cmd = schedule_and_send_messages.Command()
 
     def test_command_runs(self):
-        opts = {'now': self.td_start}
+        opts = {'now': self.td1.earliest_contact}
         self.cmd.handle_noargs(**opts)
 
     def test_sets_ppt_next_contact_time(self):
         self.assertIsNone(self.p1.next_contact_time)
-        opts = {'now': self.td_start}
+        opts = {'now': self.td1.earliest_contact}
         self.cmd.handle_noargs(**opts)
         p = models.Participant.objects.get(pk=self.p1.pk)
         self.assertIsNotNone(p.next_contact_time)
+    
+    def test_wakes_up_and_sleeps(self):
+        self.assertEqual(self.p1.status, "sleeping")
+        opts = {'now': self.td1.earliest_contact}
+        self.cmd.handle_noargs(**opts)
+        p = models.Participant.objects.get(pk=self.p1.pk)
+        self.assertEqual(p.status, "baseline")
+
+        opts['now'] = self.td1.latest_contact
+        self.cmd.handle_noargs(**opts)
+        p = models.Participant.objects.get(pk=self.p1.pk)
+        self.assertEqual(p.status, "sleeping")
+
+        opts['now'] = self.td2.earliest_contact
+        self.cmd.handle_noargs(**opts)
+        p = models.Participant.objects.get(pk=self.p1.pk)
+        self.assertEqual(p.status, "baseline")
+
+        opts['now'] = self.td2.latest_contact
+        self.cmd.handle_noargs(**opts)
+        p = models.Participant.objects.get(pk=self.p1.pk)
+        self.assertEqual(p.status, "complete")
