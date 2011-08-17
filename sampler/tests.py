@@ -194,6 +194,33 @@ class ExperienceSampleTest(TestCase):
         self.assertNotEqual(pk, e2.pk)
 
 
+class GamePermissionTest(TestCase):
+
+    def setUp(self):
+        self.now = datetime.datetime(2011, 7, 1, 9, 30)
+        self.gp = models.GamePermission()
+
+    def testAnswerWithYN(self):
+        self.assertFalse(self.gp.permissed)
+        self.gp.answer("y", self.now, True)
+        self.assertTrue(self.gp.permissed)
+        self.gp.answer("n", self.now, True)
+        self.assertFalse(self.gp.permissed)
+        self.gp.answer("Y", self.now, True)
+        self.assertTrue(self.gp.permissed)
+        self.gp.answer("N", self.now, True)
+        self.assertFalse(self.gp.permissed)
+        self.gp.answer(" y1 ", self.now, True)
+        self.assertTrue(self.gp.permissed)
+        self.gp.answer("0n0", self.now, True)
+        self.assertFalse(self.gp.permissed)
+
+    def testBadAnswer(self):
+        err = models.ResponseError
+        self.assertRaises(err, self.gp.answer, "", self.now, True)
+        self.assertRaises(err, self.gp.answer, "foo", self.now, True)
+
+
 class IncomingTextTest(TestCase):
 
     def setUp(self):

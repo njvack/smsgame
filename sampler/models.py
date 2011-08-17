@@ -577,6 +577,22 @@ class GamePermission(ParticipantExchange):
     def message(self):
         return "Are you ready to play a game and answer more text messages for the next two hours? (y/n)"
 
+    def answer(self, text, answered_at, skip_save=False):
+        """
+        Allow any text that has a Y or N in it.
+        """
+        matches = re.match(
+            r"""
+            [^yn]*
+            (?P<permission_char>[yn])
+            [^yn]*
+            """, text, (re.I | re.VERBOSE))
+        try:
+            match = matches.group("permission_char").lower()
+            self.permissed = (match == "y")
+        except:
+            raise ResponseError("We didn't understand your repsonse. Please enter y or n.")
+
 
 def random_hi_low():
     num = random.randint(1, 8)
