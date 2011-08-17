@@ -164,14 +164,11 @@ class ExperienceSampleTest(TestCase):
         self.assertEqual(corr, self.es.val_tuple)
 
     def testAnswerFailuresRaiseError(self):
-        self.assertRaises(models.ResponseError, self.es.answer,
-            "", self.later, True)
-        self.assertRaises(models.ResponseError, self.es.answer,
-            "123", self.later, True)
-        self.assertRaises(models.ResponseError, self.es.answer,
-            "1", self.later, True)
-        self.assertRaises(models.ResponseError, self.es.answer,
-            "a", self.later, True)
+        err = models.ResponseError
+        self.assertRaises(err, self.es.answer, "", self.later, True)
+        self.assertRaises(err, self.es.answer, "123", self.later, True)
+        self.assertRaises(err, self.es.answer, "1", self.later, True)
+        self.assertRaises(err, self.es.answer, "a", self.later, True)
 
     def testDeletedAtExcludesFromNewest(self):
         self.assertEqual(self.es, models.ExperienceSample.objects.newest())
