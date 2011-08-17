@@ -107,21 +107,22 @@ class Participant(StampedModel):
 
     STATUSES = {
         "sleeping": {
-            'time_fx': '_sleeping_contact_time'},
+            'time_fx': '_sleeping_contact_time', },
         "baseline": {
-            'time_fx': '_baseline_contact_time'},
+            'time_fx': '_baseline_contact_time',
+            'status_handler': '_baseline_transition', },
         "game_permission": {
-            'time_fx': '_game_permission_time'},
+            'time_fx': '_game_permission_time',
+            'status_handler': '_game_permission_transition', },
         "game_guess": {
-            'time_fx': '_game_guess_time'},
+            'time_fx': '_game_guess_time', },
         "game_inter_sample": {
-            'time_fx': '_game_intersample_time'},
+            'time_fx': '_game_intersample_time', },
         "game_result": {
-            'time_fx': '_game_result_time'},
+            'time_fx': '_game_result_time', },
         "game_post_sample": {
-            'time_fx': '_game_post_sample_time'},
-        "complete": {
-            'time_fx': None}}
+            'time_fx': '_game_post_sample_time', },
+        "complete": {}}
 
     status = models.CharField(
         max_length=20,
@@ -225,9 +226,10 @@ class Participant(StampedModel):
 
     def generate_contact_time(self, dt):
 
-        time_fx_name = self.STATUSES[self.status]['time_fx']
+        time_fx_name = self.STATUSES[self.status].get('time_fx')
         if time_fx_name is None:
             logger.info("Time fx name is none!")
+            return
         nct = getattr(self, time_fx_name)(dt)
         return nct
 
@@ -242,12 +244,11 @@ class Participant(StampedModel):
     def fire_scheduled_state_transitions(self, skip_save=False):
         # Only a few statuses get changed this way -- others result from
         # TaskDays starting/ending and responses to texts.
-        if self.status == "baseline":
-            self._baseline_transition()
-        elif self.status == "game_permission":
-            self._game_permission_transition()
-        elif self.status == "game_post_sample":
-            self._game_post_sample_transition()
+        status_fx_name = self.STATUSES[self.status].get('status_handler')
+        if status_fx_name is None:
+            logger.debug("status_handler is None")
+            return
+        getattr(self, status_fx_name)()
         if not skip_save:
             self.save()
 
