@@ -305,12 +305,12 @@ class Participant(StampedModel):
         else:
             logger.debug("%s: staying game_permission" % self)
 
-    def make_contact(self, recorded_time, tropo_requester, skip_save=False):
+    def make_contact(self, recorded_time, tropo_objuester, skip_save=False):
         """
         Actually makes a request for contact. Sets the current contact object
         as marked sent, clears self.next_contact_time.
         """
-        tropo_requester.request_session({
+        tropo_objuester.request_session({
             'pk': self.pk})
 
         obj = self.current_contact_object()
@@ -363,7 +363,7 @@ class Participant(StampedModel):
         if not skip_save:
             self.save()
 
-    def tropo_answer(self, incoming_msg, cur_time, tropo_req, skip_save=False):
+    def tropo_answer(self, incoming_msg, cur_time, tropo_obj, skip_save=False):
         obj = self.current_contact_object()
         logger.debug("Current object: %s" % obj)
         try:
@@ -378,10 +378,10 @@ class Participant(StampedModel):
                 self.status = "game_inter_sample"
         except ResponseError as e:
             logger.debug("ResponseError: %s" % e)
-            tropo_req.say(e.message)
+            tropo_obj.say(e.message)
         except Exception as e:
             logger.debug(e)
-            tropo_req.hangup()
+            tropo_obj.hangup()
 
         if not skip_save:
             self.save()
