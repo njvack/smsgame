@@ -310,37 +310,27 @@ class Participant(StampedModel):
 
     def _game_inter_sample_send(self, dt, tropo_obj):
         es = self.experiencesample_set.newest_if_unanswered()
-        if es is None:
-            logger.warn("Warning: No experience sample for inter_sample!")
-        else:
-            tropo_obj.say(es.message())
-            es.mark_sent(dt)
-            es.save()
+        tropo_obj.say(es.message())
+        es.mark_sent(dt)
+        es.save()
         self.status = "game_result"
 
     def _game_result_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest()
-        if hlg is None:
-            logger.warn("Warning: no hilowgame!")
-        else:
-            tropo_obj.say(hlg.result_message())
-            hlg.result_reported_at = dt
-            hlg.save()
+        tropo_obj.say(hlg.result_message())
+        hlg.result_reported_at = dt
+        hlg.save()
         self.status = "game_post_sample"
 
     def _game_post_sample_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest()
         es = self.experiencesample_set.newest_if_unanswered()
-        if hlg is None:
-            logger.warn("Warning! No hilowgame!")
-        elif es is None:
-            logger.warn("No experience sample!")
-        else:
-            tropo_obj.say(es.message())
-            es.mark_sent(dt)
-            es.save()
-            if (dt-hlg.result_reported_at).seconds >= POST_SAMPLE_PERIOD_SEC:
-                self.status = "baseline"
+        tropo_obj.say(es.message())
+        es.mark_sent(dt)
+        es.save()
+        if (dt-hlg.result_reported_at).seconds >= POST_SAMPLE_PERIOD_SEC:
+            logger.debug("Post-sample period over, returning to baseline")
+            self.status = "baseline"
 
     def make_contact(self, recorded_time, tropo_objuester, skip_save=False):
         """
@@ -427,11 +417,18 @@ class Participant(StampedModel):
 
     def tropo_send_message(self, cur_time, tropo_obj, skip_save=False):
         self.next_contact_time = None
-        handler_fx = self.STATUSES[self.status].get('send_handler')
+        handler_fx_name = self.STATUSES[self.status].get('send_handler')
         logger.debug("Status: %s, send_handler: %s" %
-            (self.status, handler_fx))
-        if handler_fx is not None:
-            getattr(self, handler_fx)(cur_time, tropo_obj)
+            (self.status, handler_fx_name))
+
+        if handler_fx_name is not None:
+            handler_fx = getattr(self, handler_fx_name)
+            try:
+                handler_fx(cur_time, tropo_obj)
+            except Exception as e:
+                logger.warn("tropo_send_message went wrong: %s" % e.message)
+                logger.warn("returning to baseline")
+                self.status = 'baseline'
         if not skip_save:
             self.save()
 

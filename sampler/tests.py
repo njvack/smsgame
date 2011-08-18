@@ -233,6 +233,20 @@ class ParticipantTest(TestCase):
         self.assertEqual('baseline', p.status)
         self.assertEqual(2, t.things_said)
 
+    def testSendingWithoutGameReturnsToBaseline(self):
+        p = self.p1
+        t = mocks.Tropo()
+
+        p.status = "game_result"
+        p.tropo_send_message(self.early, t, True)
+        self.assertEqual(0, t.things_said)
+        self.assertEqual("baseline", p.status)
+
+        p.status = "game_post_sample"
+        p.tropo_send_message(self.early, t, True)
+        self.assertEqual(0, t.things_said)
+        self.assertEqual("baseline", p.status)
+
 
 class ExperienceSampleTest(TestCase):
 
