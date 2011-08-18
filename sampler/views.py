@@ -7,8 +7,6 @@ logger = logging.getLogger("smsgame")
 import datetime
 import json
 
-from tropo import Tropo
-
 from . import models
 
 
@@ -27,7 +25,7 @@ def tropo(request):
 
 
 def incoming_message(request):
-    t = Tropo()
+    t = models.TextingTropo()
     response = HttpResponse(content_type='application/json')
     logger.debug(request.call_from)
     num = request.call_from['phone_number']
@@ -58,11 +56,10 @@ def incoming_message(request):
 def outgoing_message(request):
     pk = request.REQUEST['pk']
     ppt = get_object_or_404(models.Participant, pk=pk)
-    t = Tropo()
-    ppt.tropo_send_message()
-    t.call(ppt.phone_number.for_tropo, channel="TEXT")
-    t.hangup()
-    response = HttpResponse(content_type='applicaion/json')
+    t = models.TextingTropo()
+    response = HttpResponse(content_type='application/json')
+    now = datetime.datetime.now()
+    ppt.tropo_send_message(now, t)
     response.write(t.RenderJson())
     return response
 
