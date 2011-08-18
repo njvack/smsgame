@@ -12,3 +12,23 @@ class OutgoingTropoSession(object):
         logger.debug(
             "%s call: mocks.OutgoingTropoSession#request_session: %s" %
             (self.request_count, options))
+
+
+class Tropo(object):
+
+    def __init__(self, *arg, **kwargs):
+        self.called = ''
+        self.things_said = 0
+        self.hangups = 0
+
+    def call(self, number, *args, **kwargs):
+        self.called = number
+
+    def say(self, message):
+        self.things_said += 1
+
+    def hangup(self):
+        self.hangups += 1
+
+    def RenderJson(self):
+        return '{}'

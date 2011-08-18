@@ -12,8 +12,6 @@ from . import validators
 from . import views
 from sampler.management.commands import schedule_and_send_messages
 
-from tropo import Tropo
-
 
 class ParticipantTest(TestCase):
 
@@ -156,7 +154,7 @@ class ParticipantTest(TestCase):
 
     def testAnswerChangesToGameGuess(self):
         p = self.p1
-        t = Tropo()
+        t = mocks.Tropo()
         p.status = 'game_permission'
         p.gamepermission_set.create(scheduled_at=self.early)
         p.tropo_answer("n", self.early, t, True)
@@ -166,7 +164,7 @@ class ParticipantTest(TestCase):
 
     def testAnswerChangesToGameIntersample(self):
         p = self.p1
-        t = Tropo()
+        t = mocks.Tropo()
         p.status = 'game_guess'
         p.hilowgame_set.create(scheduled_at=self.early)
         p.tropo_answer("low", self.early, t, True)
@@ -174,7 +172,7 @@ class ParticipantTest(TestCase):
 
     def testFailedPermissionAnswerDoesntChangeStatus(self):
         p = self.p1
-        t = Tropo()
+        t = mocks.Tropo()
         p.status = 'game_permission'
         p.gamepermission_set.create(scheduled_at=self.early)
         p.tropo_answer("", self.early, t, True)
@@ -182,7 +180,7 @@ class ParticipantTest(TestCase):
 
     def testFailedGuessAnswerDoesntChangeStatus(self):
         p = self.p1
-        t = Tropo()
+        t = mocks.Tropo()
         p.status = 'game_guess'
         p.hilowgame_set.create(scheduled_at=self.early)
         p.tropo_answer("", self.early, t, True)
@@ -190,7 +188,7 @@ class ParticipantTest(TestCase):
 
     def testSendingClearsNextContactTime(self):
         p = self.p1
-        t = Tropo()
+        t = mocks.Tropo()
         p.next_contact_time=self.early
         p.experiencesample_set.create(scheduled_at=self.early)
         p.tropo_send_message(self.early, t, True)
@@ -199,7 +197,7 @@ class ParticipantTest(TestCase):
     def testSendingChangesStatusFromIntersampleToResult(self):
         p = self.p1
         p.status = "game_inter_sample"
-        t = Tropo()
+        t = mocks.Tropo()
         p.next_contact_time=self.early
         p.experiencesample_set.create(scheduled_at=self.early)
         p.tropo_send_message(self.early, t, True)
@@ -208,7 +206,7 @@ class ParticipantTest(TestCase):
     def testSendingChangesStatusFromResultToPostSample(self):
         p = self.p1
         p.status = "game_result"
-        t = Tropo()
+        t = mocks.Tropo()
         p.next_contact_time=self.early
         p.hilowgame_set.create(scheduled_at=self.early)
         p.tropo_send_message(self.early, t, True)
