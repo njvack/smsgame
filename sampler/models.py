@@ -9,6 +9,8 @@ import urllib2
 
 from . import validators
 
+import tropo
+
 import logging
 logger = logging.getLogger("smsgame")
 
@@ -70,6 +72,14 @@ class PhoneNumber(object):
             self.__class__.__module__,
             self.__class__.__name__,
             str(self))
+
+
+class TextingTropo(tropo.Tropo):
+
+    def send_text_to(self, phone_number, message):
+        self.call(phone_number, channel="TEXT")
+        self.say(message)
+        self.hangup()
 
 
 class PhoneNumberField(models.CharField):
@@ -311,20 +321,17 @@ class Participant(StampedModel):
 
     def _baseline_send(self, dt, tropo_obj):
         es = self.experiencesample_set.newest_if_unanswered()
-        tropo_obj.say(es.message())
-        es.mark_sent(dt)
-        es.save()
+        tropo_obj.send_text_to(self.phone_number.for_tropo, es.message())
 
     def _game_inter_sample_send(self, dt, tropo_obj):
         es = self.experiencesample_set.newest_if_unanswered()
-        tropo_obj.say(es.message())
-        es.mark_sent(dt)
-        es.save()
+        tropo_obj.send_text_to(self.phone_number.for_tropo, es.message())
         self.status = "game_result"
 
     def _game_result_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest()
-        tropo_obj.say(hlg.result_message())
+        tropo_obj.send_text_to(
+            self.phone_number.for_tropo, hlg.result_message())
         hlg.result_reported_at = dt
         hlg.save()
         self.status = "game_post_sample"
@@ -332,8 +339,7 @@ class Participant(StampedModel):
     def _game_post_sample_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest()
         es = self.experiencesample_set.newest_if_unanswered()
-        tropo_obj.say(es.message())
-        es.mark_sent(dt)
+        tropo_obj.send_text_to(self.phone_number.for_tropo, es.message())
         es.save()
         if (dt-hlg.result_reported_at).seconds >= POST_SAMPLE_PERIOD_SEC:
             logger.debug("Post-sample period over, returning to baseline")

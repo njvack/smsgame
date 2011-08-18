@@ -202,6 +202,8 @@ class ParticipantTest(TestCase):
         p.experiencesample_set.create(scheduled_at=self.early)
         p.tropo_send_message(self.early, t, True)
         self.assertEqual('game_result', p.status)
+        self.assertEqual(t.called, p.phone_number.for_tropo)
+        self.assertEqual(1, t.things_said)
 
     def testSendingChangesStatusFromResultToPostSample(self):
         p = self.p1
@@ -212,6 +214,8 @@ class ParticipantTest(TestCase):
         p.tropo_send_message(self.early, t, True)
         self.assertEqual('game_post_sample', p.status)
         self.assertIsNotNone(p.hilowgame_set.newest().result_reported_at)
+        self.assertEqual(t.called, p.phone_number.for_tropo)
+        self.assertEqual(1, t.things_said)
 
     def testSendingChangesStatusFromPostSampleToBaseline(self):
         p = self.p1
@@ -227,6 +231,7 @@ class ParticipantTest(TestCase):
         p.tropo_send_message(self.early, t, True)
         self.assertEqual('game_post_sample', p.status)
         self.assertEqual(1, t.things_said)
+        self.assertEqual(t.called, p.phone_number.for_tropo)
 
         later = self.early+datetime.timedelta(minutes=120)
         p.tropo_send_message(later, t, True)
@@ -255,7 +260,7 @@ class ParticipantTest(TestCase):
         p.status = "baseline"
         p.tropo_send_message(self.early, t, True)
         self.assertEqual(1, t.things_said)
-
+        self.assertEqual(t.called, p.phone_number.for_tropo)
 
 
 class ExperienceSampleTest(TestCase):

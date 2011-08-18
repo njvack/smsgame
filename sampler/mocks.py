@@ -32,3 +32,8 @@ class Tropo(object):
 
     def RenderJson(self):
         return '{}'
+
+    def send_text_to(self, phone_number, message):
+        self.call(phone_number, channel="TEXT")
+        self.say(message)
+        self.hangup()
