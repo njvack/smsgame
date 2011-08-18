@@ -213,6 +213,26 @@ class ParticipantTest(TestCase):
         self.assertEqual('game_post_sample', p.status)
         self.assertIsNotNone(p.hilowgame_set.newest().result_reported_at)
 
+    def testSendingChangesStatusFromPostSampleToBaseline(self):
+        p = self.p1
+        p.status = "game_post_sample"
+        t = mocks.Tropo()
+        hlg = p.hilowgame_set.create(
+            scheduled_at=self.early,
+            answered_at=self.early,
+            result_reported_at=self.early)
+        es = p.experiencesample_set.create(
+            scheduled_at=self.early)
+        later = self.early+datetime.timedelta(minutes=120)
+        p.tropo_send_message(self.early, t, True)
+        self.assertEqual('game_post_sample', p.status)
+        self.assertEqual(1, t.things_said)
+
+        later = self.early+datetime.timedelta(minutes=120)
+        p.tropo_send_message(later, t, True)
+        self.assertEqual('baseline', p.status)
+        self.assertEqual(2, t.things_said)
+
 
 class ExperienceSampleTest(TestCase):
 

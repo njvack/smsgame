@@ -123,7 +123,8 @@ class Participant(StampedModel):
             'time_fx': '_game_result_time',
             'send_handler': '_game_result_send'},
         "game_post_sample": {
-            'time_fx': '_game_post_sample_time', },
+            'time_fx': '_game_post_sample_time',
+            'send_handler': '_game_post_sample_send'},
         "complete": {}}
 
     status = models.CharField(
@@ -313,6 +314,8 @@ class Participant(StampedModel):
             logger.warn("Warning: No experience sample for inter_sample!")
         else:
             tropo_obj.say(es.message())
+            es.mark_sent(dt)
+            es.save()
         self.status = "game_result"
 
     def _game_result_send(self, dt, tropo_obj):
@@ -324,6 +327,20 @@ class Participant(StampedModel):
             hlg.result_reported_at = dt
             hlg.save()
         self.status = "game_post_sample"
+
+    def _game_post_sample_send(self, dt, tropo_obj):
+        hlg = self.hilowgame_set.newest()
+        es = self.experiencesample_set.newest_if_unanswered()
+        if hlg is None:
+            logger.warn("Warning! No hilowgame!")
+        elif es is None:
+            logger.warn("No experience sample!")
+        else:
+            tropo_obj.say(es.message())
+            es.mark_sent(dt)
+            es.save()
+            if (dt-hlg.result_reported_at).seconds >= POST_SAMPLE_PERIOD_SEC:
+                self.status = "baseline"
 
     def make_contact(self, recorded_time, tropo_objuester, skip_save=False):
         """
