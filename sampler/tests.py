@@ -247,6 +247,16 @@ class ParticipantTest(TestCase):
         self.assertEqual(0, t.things_said)
         self.assertEqual("baseline", p.status)
 
+    def testBaselineMessageSends(self):
+        p = self.p1
+        t = mocks.Tropo()
+        es = p.experiencesample_set.create(
+            scheduled_at=self.early)
+        p.status = "baseline"
+        p.tropo_send_message(self.early, t, True)
+        self.assertEqual(1, t.things_said)
+
+
 
 class ExperienceSampleTest(TestCase):
 

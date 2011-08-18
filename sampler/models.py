@@ -110,7 +110,8 @@ class Participant(StampedModel):
             'time_fx': '_sleeping_contact_time', },
         "baseline": {
             'time_fx': '_baseline_contact_time',
-            'status_handler': '_baseline_transition', },
+            'status_handler': '_baseline_transition',
+            'send_handler': '_baseline_send'},
         "game_permission": {
             'time_fx': '_game_permission_time',
             'status_handler': '_game_permission_transition', },
@@ -307,6 +308,12 @@ class Participant(StampedModel):
             self.status = "baseline"
         else:
             logger.debug("%s: staying game_permission" % self)
+
+    def _baseline_send(self, dt, tropo_obj):
+        es = self.experiencesample_set.newest_if_unanswered()
+        tropo_obj.say(es.message())
+        es.mark_sent(dt)
+        es.save()
 
     def _game_inter_sample_send(self, dt, tropo_obj):
         es = self.experiencesample_set.newest_if_unanswered()
