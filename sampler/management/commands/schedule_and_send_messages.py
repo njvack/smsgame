@@ -41,4 +41,4 @@ class Command(NoArgsCommand):
             next_contact_time__lte=now)
         for ppt in ppts:
             logger.debug("%s gots a contact to make" % (ppt))
-            ppt.make_contact(now, tropo_requester)
+            ppt.request_tropo_contact(tropo_requester)

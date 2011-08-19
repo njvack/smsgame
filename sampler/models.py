@@ -388,17 +388,12 @@ class Participant(StampedModel):
         self.status = "game_inter_sample"
         return hlg
 
-    def make_contact(self, recorded_time, tropo_obj, skip_save=False):
+    def request_tropo_contact(self, tropo_obj):
         """
-        Actually makes a request for contact. Sets the current contact object
-        as marked sent, clears self.next_contact_time.
+        Actually makes a request for contact.
         """
         tropo_obj.request_session({
             'pk': self.pk})
-
-        self.next_contact_time = None
-        if not skip_save:
-            self.save()
 
     @property
     def contact_sets(self):
