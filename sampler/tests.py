@@ -108,41 +108,6 @@ class ParticipantTest(TestCase):
         p.hilowgame_set.create(scheduled_at=t)
         self.assertEqual(3, len(p.newest_contact_objects()))
 
-    def testCurrentContactObject(self):
-        p = self.p1
-        t1 = self.early
-        t2 = self.td_start
-        t3 = self.td_end
-        t4 = self.late
-        es1 = p.experiencesample_set.create(scheduled_at=t1)
-        self.assertEqual(es1, p.current_contact_object())
-        es2 = p.experiencesample_set.create(scheduled_at=t2)
-        self.assertEqual(es2, p.current_contact_object())
-        es2.answered_at = t2
-        es2.save()
-        self.assertIsNone(p.current_contact_object())
-        # es2 is still later and has been answered
-        gp1 = p.gamepermission_set.create(scheduled_at=t1)
-        self.assertIsNone(p.current_contact_object())
-        # This one is newest...
-        gp3 = p.gamepermission_set.create(scheduled_at=t3)
-        self.assertEqual(gp3, p.current_contact_object())
-        hlg4 = p.hilowgame_set.create(scheduled_at=t4)
-        self.assertEqual(hlg4, p.current_contact_object())
-        hlg4.answered_at = t4
-        hlg4.save()
-        self.assertIsNone(p.current_contact_object())
-
-    def testCurrentContactObjectWithResult(self):
-        p = self.p1
-        t1 = self.early
-        hlg1 = p.hilowgame_set.create(scheduled_at=t1)
-        hlg1.answered_at = t1
-        hlg1.save()
-        self.assertIsNone(p.current_contact_object())
-        p.status = 'game_result'
-        self.assertEqual(hlg1, p.current_contact_object())
-
     def testBaselineTransition(self):
         p = self.p1
         p.status = 'baseline'
@@ -329,6 +294,13 @@ class ParticipantTest(TestCase):
         self.assertEqual(1, t.things_said)
         self.assertIsNotNone(g.sent_at)
 
+    def testGCUSSetsNCTGamePermission(self):
+        p = self.p1
+        t = mocks.Tropo()
+        p.status = "game_permission"
+        g = p.gamepermission_set.create(scheduled_at=self.early)
+        p.generate_contacts_and_update_status(self.early)
+        self.assertIsNotNone(p.next_contact_time)
 
 class ExperienceSampleTest(TestCase):
 

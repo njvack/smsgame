@@ -388,16 +388,14 @@ class Participant(StampedModel):
         self.status = "game_inter_sample"
         return hlg
 
-    def make_contact(self, recorded_time, tropo_objuester, skip_save=False):
+    def make_contact(self, recorded_time, tropo_obj, skip_save=False):
         """
         Actually makes a request for contact. Sets the current contact object
         as marked sent, clears self.next_contact_time.
         """
-        tropo_objuester.request_session({
+        tropo_obj.request_session({
             'pk': self.pk})
 
-        obj = self.current_contact_object()
-        obj.mark_sent(recorded_time, skip_save)
         self.next_contact_time = None
         if not skip_save:
             self.save()
@@ -415,17 +413,6 @@ class Participant(StampedModel):
         objs.sort(key=lambda o: o.scheduled_at)
         objs.reverse()
         return objs
-
-    def current_contact_object(self):
-        ncos = self.newest_contact_objects()
-        fco = None
-        if len(ncos) > 0:
-            fco = ncos[0]
-            if fco.answered_at is not None:
-                fco = None
-        if self.status == 'game_result':
-            fco = self.hilowgame_set.newest()
-        return fco
 
     def wake_up(self, wakeup_time, skip_save=False):
         if not self.status == 'sleeping':
