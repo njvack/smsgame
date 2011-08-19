@@ -435,7 +435,8 @@ class Participant(StampedModel):
         if handler_fx_name is not None:
             handler_fx = getattr(self, handler_fx_name)
             try:
-                handler_fx(incoming_msg, cur_time, tropo_obj)
+                msg_text = str(incoming_msg)
+                handler_fx(msg_text, cur_time, tropo_obj)
             except ResponseError as e:
                 logger.debug("ResponseError: %s" % e)
                 tropo_obj.say(e.message)
@@ -615,7 +616,7 @@ class ExperienceSample(ParticipantExchange):
             re.VERBOSE)
 
         try:
-            matches = parse_re.match(str(text))
+            matches = parse_re.match(text)
             self.positive_emotion = matches.group('positive_emotion')
             self.negative_emotion = matches.group('negative_emotion')
         except Exception as exc:

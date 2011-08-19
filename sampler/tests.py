@@ -205,6 +205,16 @@ class ParticipantTest(TestCase):
         p.tropo_answer("low", self.early, t, True)
         self.assertEqual('game_inter_sample', p.status)
 
+    def testAnswerWithIncomingTextObject(self):
+        p = self.p1
+        t = mocks.Tropo()
+        msg = models.IncomingTextMessage(message_text="19")
+        p.status = "baseline"
+        es = p.experiencesample_set.create(scheduled_at=self.early)
+        p.tropo_answer(msg, self.early, t, True)
+        es = p.experiencesample_set.get(pk=es.pk)
+        self.assertIsNotNone(es.answered_at)
+
     def testFailedPermissionAnswerDoesntChangeStatus(self):
         p = self.p1
         t = mocks.Tropo()
