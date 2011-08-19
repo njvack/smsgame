@@ -121,7 +121,8 @@ class Participant(StampedModel):
         "baseline": {
             'time_fx': '_baseline_contact_time',
             'status_handler': '_baseline_transition',
-            'send_handler': '_baseline_send'},
+            'send_handler': '_baseline_send',
+            'incoming_handler': '_experince_sample_incoming', },
         "game_permission": {
             'time_fx': '_game_permission_time',
             'status_handler': '_game_permission_transition', },
@@ -129,13 +130,15 @@ class Participant(StampedModel):
             'time_fx': '_game_guess_time', },
         "game_inter_sample": {
             'time_fx': '_game_intersample_time',
-            'send_handler': '_game_inter_sample_send'},
+            'send_handler': '_game_inter_sample_send',
+            'incoming_handler': '_experince_sample_incoming', },
         "game_result": {
             'time_fx': '_game_result_time',
             'send_handler': '_game_result_send'},
         "game_post_sample": {
             'time_fx': '_game_post_sample_time',
-            'send_handler': '_game_post_sample_send'},
+            'send_handler': '_game_post_sample_send',
+            'incoming_handler': '_experince_sample_incoming', },
         "complete": {}}
 
     status = models.CharField(
@@ -345,6 +348,11 @@ class Participant(StampedModel):
             logger.debug("Post-sample period over, returning to baseline")
             self.status = "baseline"
 
+    def _experince_sample_incoming(self, message_text, cur_time, tropo_obj):
+        es = self.experiencesample_set.newest_if_unanswered()
+        es.answer(message_text, cur_time)
+        return es
+
     def make_contact(self, recorded_time, tropo_objuester, skip_save=False):
         """
         Actually makes a request for contact. Sets the current contact object
@@ -406,25 +414,16 @@ class Participant(StampedModel):
             self.save()
 
     def tropo_answer(self, incoming_msg, cur_time, tropo_obj, skip_save=False):
-        obj = self.current_contact_object()
-        logger.debug("Current object: %s" % obj)
-        try:
-            obj.answer(incoming_msg, cur_time)
-            if type(obj) == GamePermission:
-                # No is a valid answer, but doesn't change our status
-                if obj.permissed:
-                    self.status = "game_guess"
-            elif type(obj) == HiLowGame:
-                # In this case, they definitely made a guess, we need to go
-                # to inter_sample
-                self.status = "game_inter_sample"
-        except ResponseError as e:
-            logger.debug("ResponseError: %s" % e)
-            tropo_obj.say(e.message)
-        except Exception as e:
-            logger.debug(e)
-            tropo_obj.hangup()
-
+        handler_fx_name = self.STATUSES[self.status].get('incoming_handler')
+        logger.debug("Status: %s, incoming_handler: %s" %
+            (self.status, handler_fx_name))
+        if handler_fx_name is not None:
+            handler_fx = getattr(self, handler_fx_name)
+            try:
+                handler_fx(incoming_msg, cur_time, tropo_obj)
+            except ResponseError as e:
+                logger.debug("ResponseError: %s" % e)
+                tropo_obj.say(e.message)
         if not skip_save:
             self.save()
 

@@ -152,6 +152,41 @@ class ParticipantTest(TestCase):
         p._baseline_transition()
         self.assertEqual(p.status, 'game_permission')
 
+    def testAnswerWithExpSampleAndGame(self):
+        p = self.p1
+        t = mocks.Tropo()
+        p.gamepermission_set.create(scheduled_at=self.td_start)
+        es = p.experiencesample_set.create(scheduled_at=self.early)
+        p.status = "baseline"
+        p.tropo_answer("19", self.early, t)
+        es = p.experiencesample_set.get(pk=es.pk)
+        self.assertEqual(0, t.things_said)
+        self.assertIsNotNone(es.answered_at)
+
+    def testExpEampleAnswer(self):
+        p = self.p1
+        t = mocks.Tropo()
+
+        p.status = "baseline"
+        es = p.experiencesample_set.create(scheduled_at=self.early)
+        p.tropo_answer("19", self.early, t)
+        es = p.experiencesample_set.get(pk=es.pk)
+        self.assertIsNotNone(es.answered_at)
+
+        p.status = "game_inter_sample"
+        p.experiencesample_set.all().delete()
+        es = p.experiencesample_set.create(scheduled_at=self.early)
+        p.tropo_answer("19", self.early, t)
+        es = p.experiencesample_set.get(pk=es.pk)
+        self.assertIsNotNone(es.answered_at)
+
+        p.status = "game_post_sample"
+        p.experiencesample_set.all().delete()
+        es = p.experiencesample_set.create(scheduled_at=self.early)
+        p.tropo_answer("19", self.early, t)
+        es = p.experiencesample_set.get(pk=es.pk)
+        self.assertIsNotNone(es.answered_at)
+
     def testAnswerChangesToGameGuess(self):
         p = self.p1
         t = mocks.Tropo()
