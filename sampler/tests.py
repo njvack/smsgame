@@ -159,6 +159,7 @@ class ParticipantTest(TestCase):
         p.gamepermission_set.create(scheduled_at=self.early)
         p.tropo_answer("n", self.early, t, True)
         self.assertEqual("game_permission", p.status)
+        p.gamepermission_set.create(scheduled_at=self.early)
         p.tropo_answer("y", self.early, t, True)
         self.assertEqual("game_guess", p.status)
 
@@ -386,11 +387,13 @@ class GamePermissionTest(TestCase):
         self.assertTrue(self.gp.permissed)
         self.gp.answer("0n0", self.now, True)
         self.assertFalse(self.gp.permissed)
+        self.assertIsNotNone(self.gp.answered_at)
 
     def testBadAnswer(self):
         err = models.ResponseError
         self.assertRaises(err, self.gp.answer, "", self.now, True)
         self.assertRaises(err, self.gp.answer, "foo", self.now, True)
+        self.assertIsNone(self.gp.answered_at)
 
 
 class HiLowGameTest(TestCase):
@@ -419,6 +422,7 @@ class HiLowGameTest(TestCase):
         err = models.ResponseError
         self.assertRaises(err, self.hlg.answer, "", self.now, True)
         self.assertRaises(err, self.hlg.answer, "foo", self.now, True)
+        self.assertIsNone(self.hlg.answered_at)
 
     def testGuessWasCorrect(self):
         hlg = self.hlg
