@@ -48,7 +48,7 @@ class ParticipantTest(TestCase):
         self.p1.status = 'baseline'
         self.p1.next_contact_time = self.td_start
         self.p1.gamepermission_set.create(scheduled_at=self.td_start)
-        self.p1.fire_scheduled_state_transitions()
+        self.p1._fire_scheduled_state_transitions()
         self.assertEqual("game_permission", self.p1.status)
 
     def testGetOrGenerateContactBaseline(self):

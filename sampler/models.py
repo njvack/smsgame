@@ -261,10 +261,12 @@ class Participant(StampedModel):
         if self.next_contact_time is None:
             self.next_contact_time = self.generate_contact_time(dt)
             logger.debug("Generated NCT: %s" % self.next_contact_time)
-        self.fire_scheduled_state_transitions(skip_save)
+        self._fire_scheduled_state_transitions()
+        if not skip_save:
+            self.save()
         return self.get_or_create_contact()
 
-    def fire_scheduled_state_transitions(self, skip_save=False):
+    def _fire_scheduled_state_transitions(self):
         # Only a few statuses get changed this way -- others result from
         # TaskDays starting/ending and responses to texts.
         status_fx_name = self.STATUSES[self.status].get('status_handler')
@@ -272,8 +274,6 @@ class Participant(StampedModel):
             logger.debug("status_handler is None")
             return
         getattr(self, status_fx_name)()
-        if not skip_save:
-            self.save()
 
     def _baseline_transition(self):
         if not self.status == 'baseline':
