@@ -710,6 +710,7 @@ class HiLowGame(ParticipantExchange):
         except:
             raise ResponseError("We didn't understand your repsonse. Please enter low or high.")
 
+        self.answered_at = answered_at
         if not skip_save:
             self.save()
 

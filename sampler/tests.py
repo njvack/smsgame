@@ -309,6 +309,7 @@ class ParticipantTest(TestCase):
         p.generate_contacts_and_update_status(self.early)
         self.assertIsNotNone(p.next_contact_time)
 
+
 class ExperienceSampleTest(TestCase):
 
     def setUp(self):
@@ -412,6 +413,7 @@ class HiLowGameTest(TestCase):
         self.assertFalse(hlg.guessed_low)
         hlg.answer('L', self.now, True)
         self.assertTrue(hlg.guessed_low)
+        self.assertIsNotNone(hlg.answered_at)
 
     def testBadAnswer(self):
         err = models.ResponseError
