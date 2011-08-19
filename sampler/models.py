@@ -328,31 +328,36 @@ class Participant(StampedModel):
     def _baseline_send(self, dt, tropo_obj):
         es = self.experiencesample_set.newest_if_unanswered()
         es.mark_sent(dt)
-        tropo_obj.send_text_to(self.phone_number.for_tropo, es.message())
+        tropo_obj.send_text_to(
+            self.phone_number.for_tropo,
+            es.get_message_mark_sent(dt))
 
     def _game_permission_send(self, dt, tropo_obj):
         gp = self.gamepermission_set.newest_if_unanswered()
-        tropo_obj.send_text_to(self.phone_number.for_tropo, gp.message())
-        gp.mark_sent(dt)
+        tropo_obj.send_text_to(
+            self.phone_number.for_tropo,
+            gp.get_message_mark_sent(dt))
 
     def _game_inter_sample_send(self, dt, tropo_obj):
         es = self.experiencesample_set.newest_if_unanswered()
-        tropo_obj.send_text_to(self.phone_number.for_tropo, es.message())
+        tropo_obj.send_text_to(
+            self.phone_number.for_tropo,
+            es.get_message_mark_sent(dt))
         self.status = "game_result"
 
     def _game_result_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest()
         tropo_obj.send_text_to(
-            self.phone_number.for_tropo, hlg.result_message())
-        hlg.result_reported_at = dt
-        hlg.save()
+            self.phone_number.for_tropo,
+            hlg.get_result_message_mark_sent(dt))
         self.status = "game_post_sample"
 
     def _game_post_sample_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest()
         es = self.experiencesample_set.newest_if_unanswered()
-        tropo_obj.send_text_to(self.phone_number.for_tropo, es.message())
-        es.save()
+        tropo_obj.send_text_to(
+            self.phone_number.for_tropo,
+            es.get_message_mark_sent(dt))
         if (dt-hlg.result_reported_at).seconds >= POST_SAMPLE_PERIOD_SEC:
             logger.debug("Post-sample period over, returning to baseline")
             self.status = "baseline"
@@ -639,7 +644,10 @@ class ExperienceSample(ParticipantExchange):
     def __str__(self):
         return "%s %s" % (self.positive_emotion, self.negative_emotion)
 
-    def message(self):
+    def get_message_mark_sent(self, dt, skip_save=False):
+        self.sent_at = dt
+        if not skip_save:
+            self.save()
         return "Enter how much positive emotion (1-9) and negative emotion (1-9) you are feeling right now."
 
 
@@ -648,7 +656,10 @@ class GamePermission(ParticipantExchange):
     permissed = models.BooleanField(
         default=False)
 
-    def message(self):
+    def get_message_mark_sent(self, dt, skip_save=False):
+        self.sent_at = dt
+        if not skip_save:
+            self.save()
         return "Are you ready to play a game and answer more text messages for the next two hours? (y/n)"
 
     def answer(self, text, answered_at, skip_save=False):
@@ -710,7 +721,10 @@ class HiLowGame(ParticipantExchange):
         if not skip_save:
             self.save()
 
-    def message(self):
+    def get_message_mark_sent(self, dt, skip_save=False):
+        self.sent_at = dt
+        if not skip_save:
+            self.save()
         return "We generated a number between 1 and 9. Guess if it's lower or higher than 5. (low/high)"
 
     @property
@@ -718,11 +732,14 @@ class HiLowGame(ParticipantExchange):
         is_low = self.correct_guess < 5
         return (is_low == self.guessed_low)
 
-    def result_message(self):
+    def get_result_message_mark_sent(self, dt, skip_save=False):
         if self.guess_was_correct:
             msg = "The number was %s. You guessed right! $20 has been added to your account." % self.correct_guess
         else:
             msg = "The number was %s. You guessed wrong. No money additional money has been added to your account." % self.correct_guess
+        self.result_reported_at = dt
+        if not skip_save:
+            self.save()
         return msg
 
 
