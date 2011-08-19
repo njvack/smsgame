@@ -19,6 +19,7 @@ class Tropo(object):
     def __init__(self, *arg, **kwargs):
         self.called = ''
         self.things_said = 0
+        self.things_said_list = []
         self.hangups = 0
 
     def call(self, number, *args, **kwargs):
@@ -26,6 +27,7 @@ class Tropo(object):
 
     def say(self, message):
         self.things_said += 1
+        self.things_said_list.append(message)
 
     def hangup(self):
         self.hangups += 1
