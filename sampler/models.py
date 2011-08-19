@@ -125,7 +125,8 @@ class Participant(StampedModel):
             'incoming_handler': '_experince_sample_incoming', },
         "game_permission": {
             'time_fx': '_game_permission_time',
-            'status_handler': '_game_permission_transition', },
+            'status_handler': '_game_permission_transition',
+            'incoming_handler': '_game_permission_incoming', },
         "game_guess": {
             'time_fx': '_game_guess_time', },
         "game_inter_sample": {
@@ -352,6 +353,13 @@ class Participant(StampedModel):
         es = self.experiencesample_set.newest_if_unanswered()
         es.answer(message_text, cur_time)
         return es
+
+    def _game_permission_incoming(self, message_text, cur_time, tropo_obj):
+        gp = self.gamepermission_set.newest_if_unanswered()
+        gp.answer(message_text, cur_time)
+        if gp.permissed:
+            self.status = "game_guess"
+        return gp
 
     def make_contact(self, recorded_time, tropo_objuester, skip_save=False):
         """
