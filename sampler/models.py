@@ -130,6 +130,7 @@ class Participant(StampedModel):
             'incoming_handler': '_game_permission_incoming', },
         "game_guess": {
             'time_fx': '_game_guess_time',
+            'send_handler': '_game_guess_send',
             'incoming_handler': '_game_guess_incoming', },
         "game_inter_sample": {
             'time_fx': '_game_intersample_time',
@@ -337,6 +338,13 @@ class Participant(StampedModel):
         tropo_obj.send_text_to(
             self.phone_number.for_tropo,
             gp.get_message_mark_sent(dt))
+
+    def _game_guess_send(self, dt, tropo_obj):
+        hlg = self.hilowgame_set.newest_if_unanswered()
+        foo = hlg.get_message_mark_sent(dt)
+        tropo_obj.send_text_to(
+            self.phone_number.for_tropo,
+            hlg.get_message_mark_sent(dt))
 
     def _game_inter_sample_send(self, dt, tropo_obj):
         es = self.experiencesample_set.newest_if_unanswered()

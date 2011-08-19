@@ -319,6 +319,16 @@ class ParticipantTest(TestCase):
         self.assertEqual(1, t.things_said)
         self.assertIsNotNone(gp.sent_at)
 
+    def testGameGuessSends(self):
+        p = self.p1
+        t = mocks.Tropo()
+        g = p.hilowgame_set.create(scheduled_at=self.early)
+        p.status = "game_guess"
+        p.tropo_send_message(self.early, t, True)
+        g = p.hilowgame_set.get(pk=g.pk)
+        self.assertEqual(1, t.things_said)
+        self.assertIsNotNone(g.sent_at)
+
 
 class ExperienceSampleTest(TestCase):
 
