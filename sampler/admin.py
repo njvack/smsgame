@@ -49,7 +49,7 @@ class IncomingTextMessageAdmin(admin.ModelAdmin):
     ordering = ('-created_at', )
 
 
-class ExperienceSampleAdmin(admin.ModelAdmin):
+class ParticipantExchangeAdmin(admin.ModelAdmin):
 
     list_display = ('participant', 'sent_at', 'answered_at')
     list_filter = ('participant', )
@@ -59,4 +59,6 @@ admin.site.register(models.Experiment, ExperimentAdmin)
 admin.site.register(models.Participant, ParticipantAdmin)
 admin.site.register(models.TaskDay)
 admin.site.register(models.IncomingTextMessage, IncomingTextMessageAdmin)
-admin.site.register(models.ExperienceSample, ExperienceSampleAdmin)
+admin.site.register(models.ExperienceSample, ParticipantExchangeAdmin)
+admin.site.register(models.HiLowGame, ParticipantExchangeAdmin)
+admin.site.register(models.GamePermission, ParticipantExchangeAdmin)
