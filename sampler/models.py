@@ -128,7 +128,8 @@ class Participant(StampedModel):
             'status_handler': '_game_permission_transition',
             'incoming_handler': '_game_permission_incoming', },
         "game_guess": {
-            'time_fx': '_game_guess_time', },
+            'time_fx': '_game_guess_time',
+            'incoming_handler': '_game_guess_incoming', },
         "game_inter_sample": {
             'time_fx': '_game_intersample_time',
             'send_handler': '_game_inter_sample_send',
@@ -360,6 +361,12 @@ class Participant(StampedModel):
         if gp.permissed:
             self.status = "game_guess"
         return gp
+
+    def _game_guess_incoming(self, message_text, cur_time, tropo_obj):
+        hlg = self.hilowgame_set.newest_if_unanswered()
+        hlg.answer(message_text, cur_time) # Raises an exception if this fails
+        self.status = "game_inter_sample"
+        return hlg
 
     def make_contact(self, recorded_time, tropo_objuester, skip_save=False):
         """
