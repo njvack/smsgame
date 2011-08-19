@@ -557,8 +557,7 @@ class ParticipantExchange(StampedModel):
     objects = ParticipantExchangeManager()
 
     participant = models.ForeignKey(
-        "Participant",
-        editable=False)
+        "Participant")
 
     incoming_text = models.ForeignKey(
         "IncomingTextMessage",
