@@ -246,20 +246,22 @@ class Participant(StampedModel):
         return nct
 
     def generate_contact_time(self, dt):
-
         time_fx_name = self.STATUSES[self.status].get('time_fx')
+        logger.debug("generate_contact_time fx for status %s: %s" %
+            (self.status, time_fx_name))
         if time_fx_name is None:
             logger.info("Time fx name is none!")
             return
         nct = getattr(self, time_fx_name)(dt)
         return nct
 
-    def generate_contacts_and_update_status(self, dt):
+    def generate_contacts_and_update_status(self, dt, skip_save=False):
         logger.debug("%s generating contacts at %s -- next_contact: %s" %
             (self, dt, self.next_contact_time))
         if self.next_contact_time is None:
             self.next_contact_time = self.generate_contact_time(dt)
-        self.fire_scheduled_state_transitions()
+            logger.debug("Generated NCT: %s" % self.next_contact_time)
+        self.fire_scheduled_state_transitions(skip_save)
         return self.get_or_create_contact()
 
     def fire_scheduled_state_transitions(self, skip_save=False):

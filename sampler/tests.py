@@ -302,6 +302,13 @@ class ParticipantTest(TestCase):
         p.generate_contacts_and_update_status(self.early)
         self.assertIsNotNone(p.next_contact_time)
 
+    def testGCUSSetsNCTGameIntersample(self):
+        p = self.p1
+        t = mocks.Tropo()
+        p.status = "game_inter_sample"
+        p.generate_contacts_and_update_status(self.early)
+        self.assertIsNotNone(p.next_contact_time)
+
 class ExperienceSampleTest(TestCase):
 
     def setUp(self):
