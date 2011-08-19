@@ -304,8 +304,20 @@ class ParticipantTest(TestCase):
             scheduled_at=self.early)
         p.status = "baseline"
         p.tropo_send_message(self.early, t, True)
+        es = p.experiencesample_set.get(pk=es.pk)
         self.assertEqual(1, t.things_said)
         self.assertEqual(t.called, p.phone_number.for_tropo)
+        self.assertIsNotNone(es.sent_at)
+
+    def testGamePermissionSends(self):
+        p = self.p1
+        t = mocks.Tropo()
+        gp = p.gamepermission_set.create(scheduled_at=self.early)
+        p.status = "game_permission"
+        p.tropo_send_message(self.early, t, True)
+        gp = p.gamepermission_set.get(pk=gp.pk)
+        self.assertEqual(1, t.things_said)
+        self.assertIsNotNone(gp.sent_at)
 
 
 class ExperienceSampleTest(TestCase):

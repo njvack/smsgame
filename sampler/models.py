@@ -126,6 +126,7 @@ class Participant(StampedModel):
         "game_permission": {
             'time_fx': '_game_permission_time',
             'status_handler': '_game_permission_transition',
+            'send_handler': '_game_permission_send',
             'incoming_handler': '_game_permission_incoming', },
         "game_guess": {
             'time_fx': '_game_guess_time',
@@ -326,7 +327,13 @@ class Participant(StampedModel):
 
     def _baseline_send(self, dt, tropo_obj):
         es = self.experiencesample_set.newest_if_unanswered()
+        es.mark_sent(dt)
         tropo_obj.send_text_to(self.phone_number.for_tropo, es.message())
+
+    def _game_permission_send(self, dt, tropo_obj):
+        gp = self.gamepermission_set.newest_if_unanswered()
+        tropo_obj.send_text_to(self.phone_number.for_tropo, gp.message())
+        gp.mark_sent(dt)
 
     def _game_inter_sample_send(self, dt, tropo_obj):
         es = self.experiencesample_set.newest_if_unanswered()
