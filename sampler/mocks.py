@@ -35,9 +35,16 @@ class Tropo(object):
     def RenderJson(self):
         return '{}'
 
+    def say_to(self, participant, dt, message):
+        if not participant.can_send_texts_at(dt):
+            logger.debug("say_to: %s can't get messages more at %s" %
+                (participant, dt))
+            return False
+        self.say(message)
+
     def send_text_to(self, participant, dt, message):
         if not participant.can_send_texts_at(dt):
-            logger.debug("%s can't get messages more at %s" %
+            logger.debug("send_text_to: %s can't get messages more at %s" %
                 (participant, dt))
             return False
         self.call(participant.phone_number.for_tropo, channel="TEXT")

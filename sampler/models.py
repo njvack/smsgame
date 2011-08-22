@@ -76,10 +76,22 @@ class PhoneNumber(object):
 
 class TextingTropo(tropo.Tropo):
 
-    def send_text_to(self, phone_number, message):
-        self.call(phone_number, channel="TEXT")
+    def say_to(self, participant, dt, message):
+        if not participant.can_send_texts_at(dt):
+            logger.debug("say_to: %s can't get messages more at %s" %
+                (participant, dt))
+            return False
+        self.say(message)
+
+    def send_text_to(self, participant, dt, message):
+        if not participant.can_send_texts_at(dt):
+            logger.debug("send_text_to: %s can't get messages more at %s" %
+                (participant, dt))
+            return False
+        self.call(participant.phone_number.for_tropo, channel="TEXT")
         self.say(message)
         self.hangup()
+        return True
 
 
 class PhoneNumberField(models.CharField):
@@ -451,7 +463,7 @@ class Participant(StampedModel):
                 handler_fx(msg_text, cur_time, tropo_obj)
             except ResponseError as e:
                 logger.debug("ResponseError: %s" % e)
-                tropo_obj.say(e.message)
+                tropo_obj.say_to(self, cur_time, e.message)
         if not skip_save:
             self.save()
 
