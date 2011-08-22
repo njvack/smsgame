@@ -49,6 +49,14 @@ class IncomingTextMessageAdmin(admin.ModelAdmin):
     ordering = ('-created_at', )
 
 
+class OutgoingTextMessageAdmin(admin.ModelAdmin):
+
+    list_display = ('participant', 'sent_at', '__str__')
+    list_filter = ('participant', )
+
+    ordering = ('-sent_at', )
+
+
 class ParticipantExchangeAdmin(admin.ModelAdmin):
 
     list_display = ('participant', 'sent_at', 'answered_at')
@@ -59,6 +67,7 @@ admin.site.register(models.Experiment, ExperimentAdmin)
 admin.site.register(models.Participant, ParticipantAdmin)
 admin.site.register(models.TaskDay)
 admin.site.register(models.IncomingTextMessage, IncomingTextMessageAdmin)
+admin.site.register(models.OutgoingTextMessage, OutgoingTextMessageAdmin)
 admin.site.register(models.ExperienceSample, ParticipantExchangeAdmin)
 admin.site.register(models.HiLowGame, ParticipantExchangeAdmin)
 admin.site.register(models.GamePermission, ParticipantExchangeAdmin)
