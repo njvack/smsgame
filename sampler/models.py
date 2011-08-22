@@ -381,6 +381,7 @@ class Participant(StampedModel):
         gp.answer(message_text, cur_time)
         if gp.permissed:
             self.status = "game_guess"
+            self.hilowgame_set.create(scheduled_at=cur_time)
         return gp
 
     def _game_guess_incoming(self, message_text, cur_time, tropo_obj):
