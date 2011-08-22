@@ -156,6 +156,12 @@ class Participant(StampedModel):
         blank=True,
         null=True)
 
+    stopped = models.BooleanField(
+        default=False)
+
+    def can_send_texts_at(self, dt):
+        return not self.stopped
+
     def assign_task_days(self, num):
         for i in range(num):
             tdelta = datetime.timedelta(i)
@@ -314,33 +320,38 @@ class Participant(StampedModel):
         es = self.experiencesample_set.create(scheduled_at=dt)
         es.mark_sent(dt)
         tropo_obj.send_text_to(
-            self.phone_number.for_tropo,
+            self,
+            dt,
             es.get_message_mark_sent(dt))
 
     def _game_permission_send(self, dt, tropo_obj):
         gp = self.gamepermission_set.newest_if_unanswered()
         tropo_obj.send_text_to(
-            self.phone_number.for_tropo,
+            self,
+            dt,
             gp.get_message_mark_sent(dt))
 
     def _game_guess_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest_if_unanswered()
         foo = hlg.get_message_mark_sent(dt)
         tropo_obj.send_text_to(
-            self.phone_number.for_tropo,
+            self,
+            dt,
             hlg.get_message_mark_sent(dt))
 
     def _game_inter_sample_send(self, dt, tropo_obj):
         es = self.experiencesample_set.create(scheduled_at=dt)
         tropo_obj.send_text_to(
-            self.phone_number.for_tropo,
+            self,
+            dt,
             es.get_message_mark_sent(dt))
         self.status = "game_result"
 
     def _game_result_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest()
         tropo_obj.send_text_to(
-            self.phone_number.for_tropo,
+            self,
+            dt,
             hlg.get_result_message_mark_sent(dt))
         self.status = "game_post_sample"
 
@@ -348,7 +359,8 @@ class Participant(StampedModel):
         hlg = self.hilowgame_set.newest()
         es = self.experiencesample_set.create(scheduled_at=dt)
         tropo_obj.send_text_to(
-            self.phone_number.for_tropo,
+            self,
+            dt,
             es.get_message_mark_sent(dt))
         if (dt-hlg.result_reported_at).seconds >= POST_SAMPLE_PERIOD_SEC:
             logger.debug("Post-sample period over, returning to baseline")
@@ -422,13 +434,20 @@ class Participant(StampedModel):
             self.save()
 
     def tropo_answer(self, incoming_msg, cur_time, tropo_obj, skip_save=False):
+        # Getting a "stop" message overrides everything
+        msg_text = str(incoming_msg)
+        if StopMessage.is_stop_message(msg_text):
+            self.stopped = True
+            if not skip_save:
+                self.save()
+            return
+
         handler_fx_name = self.STATUSES[self.status].get('incoming_handler')
         logger.debug("Status: %s, incoming_handler: %s" %
             (self.status, handler_fx_name))
         if handler_fx_name is not None:
             handler_fx = getattr(self, handler_fx_name)
             try:
-                msg_text = str(incoming_msg)
                 handler_fx(msg_text, cur_time, tropo_obj)
             except ResponseError as e:
                 logger.debug("ResponseError: %s" % e)
@@ -725,7 +744,8 @@ STOP_RE = re.compile(
 
 class StopMessage(object):
 
-    def is_stop_message(self, msg):
+    @classmethod
+    def is_stop_message(klass, msg):
         return STOP_RE.match(msg)
 
 

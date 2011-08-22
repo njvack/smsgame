@@ -146,6 +146,12 @@ class ParticipantTest(TestCase):
         p.tropo_answer("low", self.early, t, True)
         self.assertEqual('game_inter_sample', p.status)
 
+    def testAnswerStopMessageSetsStopped(self):
+        p = self.p1
+        t = mocks.Tropo()
+        p.tropo_answer("STOP", self.early, t, True)
+        self.assertTrue(p.stopped)
+
     def testAnswerWithIncomingTextObject(self):
         p = self.p1
         t = mocks.Tropo()
@@ -294,6 +300,15 @@ class ParticipantTest(TestCase):
         p.tropo_send_message(self.early, t, True)
         self.assertEqual(2, p.experiencesample_set.all().count())
         self.assertEqual(2, t.things_said)
+
+    def testDoesNotSendWhileStopped(self):
+        p = self.p1
+        t = mocks.Tropo()
+        p.status = "baseline"
+        p.stopped = True
+        p.generate_contacts_and_update_status(self.early)
+        p.tropo_send_message(self.early, t, True)
+        self.assertEqual(0, t.things_said)
 
 
 class ExperienceSampleTest(TestCase):
@@ -681,6 +696,15 @@ class IncludesValidatorTest(TestCase):
 
     def testIVDoesNotRaiseForSuccess(self):
         self.assertIsNone(self.iv('foo'))
+
+
+class TextingTropoTest(TestCase):
+
+    def setUp(self):
+        self.exp = models.Experiment.objects.create(max_messages_per_day=1)
+        self.p1 = models.Participant.objects.create(
+            experiment=self.exp, start_date=self.today,
+            phone_number='6085551212')
 
 
 class SecheduleAndSendTest(TestCase):
