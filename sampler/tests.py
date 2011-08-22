@@ -51,23 +51,21 @@ class ParticipantTest(TestCase):
         self.p1._fire_scheduled_state_transitions()
         self.assertEqual("game_permission", self.p1.status)
 
-    def testGetOrGenerateContactBaseline(self):
-        self.p1.status = 'baseline'
-        self.p1.next_contact_time = self.td_start
-        self.p1.get_or_create_contact()
-        self.assertGreater(self.p1.experiencesample_set.count(), 0)
-
-    def testGetOrGenerateContactIntersample(self):
+    def testSendIntersampleMakesExpSample(self):
+        t = mocks.Tropo()
         self.p1.status = 'game_inter_sample'
         self.p1.next_contact_time = self.td_start
-        self.p1.get_or_create_contact()
-        self.assertGreater(self.p1.experiencesample_set.count(), 0)
+        self.p1.tropo_send_message(self.td_start, t, True)
+        self.assertEqual(1, self.p1.experiencesample_set.count())
+        self.assertEqual(1, t.things_said)
 
-    def testGetOrGenerateContactPostSample(self):
+    def testSendPostSampleMakesExpSample(self):
+        t = mocks.Tropo()
         self.p1.status = 'game_post_sample'
         self.p1.next_contact_time = self.td_start
-        self.p1.get_or_create_contact()
-        self.assertGreater(self.p1.experiencesample_set.count(), 0)
+        self.p1.tropo_send_message(self.td_start, t, True)
+        self.assertEqual(1, self.p1.experiencesample_set.count())
+        self.assertEqual(1, t.things_said)
 
     def testGetOrGenerateContactPermission(self):
         self.assertEqual(self.p1.gamepermission_set.count(), 0)
@@ -260,17 +258,15 @@ class ParticipantTest(TestCase):
 
         p.status = "game_post_sample"
         p.tropo_send_message(self.early, t, True)
-        self.assertEqual(0, t.things_said)
+        self.assertEqual(1, t.things_said)
         self.assertEqual("baseline", p.status)
 
     def testBaselineMessageSends(self):
         p = self.p1
         t = mocks.Tropo()
-        es = p.experiencesample_set.create(
-            scheduled_at=self.early)
         p.status = "baseline"
         p.tropo_send_message(self.early, t, True)
-        es = p.experiencesample_set.get(pk=es.pk)
+        es = p.experiencesample_set.newest()
         self.assertEqual(1, t.things_said)
         self.assertEqual(t.called, p.phone_number.for_tropo)
         self.assertIsNotNone(es.sent_at)
@@ -297,7 +293,6 @@ class ParticipantTest(TestCase):
 
     def testGCUSSetsNCTGamePermission(self):
         p = self.p1
-        t = mocks.Tropo()
         p.status = "game_permission"
         g = p.gamepermission_set.create(scheduled_at=self.early)
         p.generate_contacts_and_update_status(self.early)
@@ -305,10 +300,23 @@ class ParticipantTest(TestCase):
 
     def testGCUSSetsNCTGameIntersample(self):
         p = self.p1
-        t = mocks.Tropo()
         p.status = "game_inter_sample"
         p.generate_contacts_and_update_status(self.early)
         self.assertIsNotNone(p.next_contact_time)
+
+    def testExpSamplesAreNotReused(self):
+        p = self.p1
+        t = mocks.Tropo()
+        p.status = "baseline"
+        p.generate_contacts_and_update_status(self.early)
+        p.tropo_send_message(self.early, t, True)
+        self.assertEqual(1, p.experiencesample_set.all().count())
+        self.assertEqual(1, t.things_said)
+        self.assertIsNone(p.next_contact_time)
+        p.generate_contacts_and_update_status(self.td_start)
+        p.tropo_send_message(self.early, t, True)
+        self.assertEqual(2, p.experiencesample_set.all().count())
+        self.assertEqual(2, t.things_said)
 
 
 class ExperienceSampleTest(TestCase):

@@ -184,8 +184,7 @@ class Participant(StampedModel):
             self.status == 'baseline' or
             self.status == 'game_inter_sample' or
             self.status == 'game_post_sample'):
-
-            obj = self.experiencesample_set.schedule_at(self.next_contact_time)
+            obj = self.experiencesample_set.newest()
         elif (self.status == 'game_permission'):
             obj = self.gamepermission_set.schedule_at(self.next_contact_time)
         elif (self.status == 'game_guess'):
@@ -329,7 +328,7 @@ class Participant(StampedModel):
             logger.debug("%s: staying game_permission" % self)
 
     def _baseline_send(self, dt, tropo_obj):
-        es = self.experiencesample_set.newest_if_unanswered()
+        es = self.experiencesample_set.create(scheduled_at=dt)
         es.mark_sent(dt)
         tropo_obj.send_text_to(
             self.phone_number.for_tropo,
@@ -349,7 +348,7 @@ class Participant(StampedModel):
             hlg.get_message_mark_sent(dt))
 
     def _game_inter_sample_send(self, dt, tropo_obj):
-        es = self.experiencesample_set.newest_if_unanswered()
+        es = self.experiencesample_set.create(scheduled_at=dt)
         tropo_obj.send_text_to(
             self.phone_number.for_tropo,
             es.get_message_mark_sent(dt))
@@ -364,7 +363,7 @@ class Participant(StampedModel):
 
     def _game_post_sample_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest()
-        es = self.experiencesample_set.newest_if_unanswered()
+        es = self.experiencesample_set.create(scheduled_at=dt)
         tropo_obj.send_text_to(
             self.phone_number.for_tropo,
             es.get_message_mark_sent(dt))
