@@ -1,5 +1,6 @@
 import logging
 logger = logging.getLogger("smsgame")
+from . import models
 
 
 class OutgoingTropoSession(object):
@@ -14,7 +15,7 @@ class OutgoingTropoSession(object):
             (self.request_count, options))
 
 
-class Tropo(object):
+class Tropo(models.TextingTropo):
 
     def __init__(self, *arg, **kwargs):
         self.called = ''
@@ -34,20 +35,3 @@ class Tropo(object):
 
     def RenderJson(self):
         return '{}'
-
-    def say_to(self, participant, dt, message):
-        if not participant.can_send_texts_at(dt):
-            logger.debug("say_to: %s can't get messages more at %s" %
-                (participant, dt))
-            return False
-        self.say(message)
-
-    def send_text_to(self, participant, dt, message):
-        if not participant.can_send_texts_at(dt):
-            logger.debug("send_text_to: %s can't get messages more at %s" %
-                (participant, dt))
-            return False
-        self.call(participant.phone_number.for_tropo, channel="TEXT")
-        self.say(message)
-        self.hangup()
-        return True

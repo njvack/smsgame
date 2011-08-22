@@ -702,9 +702,41 @@ class TextingTropoTest(TestCase):
 
     def setUp(self):
         self.exp = models.Experiment.objects.create(max_messages_per_day=1)
+        self.today = datetime.date(2011, 7, 1)
         self.p1 = models.Participant.objects.create(
-            experiment=self.exp, start_date=self.today,
+            experiment=self.exp,
+            start_date=self.today,
             phone_number='6085551212')
+        self.early = datetime.datetime(2011, 7, 1, 8, 30)
+
+    def testDoesNotSendWhenParticipantIsStopped(self):
+        p = self.p1
+        t = mocks.Tropo()
+        p.stopped = True
+        t.send_text_to(p, self.early, "Woo")
+        self.assertEqual(0, t.things_said)
+        t.say_to(p, self.early, "Wham")
+        self.assertEqual(0, t.things_said)
+
+    def testSendToGeneratesOutgoingTextMessage(self):
+        p = self.p1
+        t = mocks.Tropo()
+        t.send_text_to(p, self.early, "Woo")
+        self.assertEqual(1, p.outgoingtextmessage_set.count())
+
+    def testSayToGeneratesOutgoingTextMessage(self):
+        p = self.p1
+        t = mocks.Tropo()
+        t.say_to(p, self.early, "Woo")
+        self.assertEqual(1, p.outgoingtextmessage_set.count())
+
+    def testDoesntSendTooManyMessages(self):
+        p = self.p1
+        t = mocks.Tropo()
+        self.assertTrue(t.say_to(p, self.early, "Woo"))
+        self.assertFalse(t.say_to(p, self.early, "Woo"))
+        self.assertEqual(1, t.things_said)
+        self.assertEqual(1, p.outgoingtextmessage_set.count())
 
 
 class SecheduleAndSendTest(TestCase):

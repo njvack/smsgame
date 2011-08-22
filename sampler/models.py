@@ -81,7 +81,11 @@ class TextingTropo(tropo.Tropo):
             logger.debug("say_to: %s can't get messages more at %s" %
                 (participant, dt))
             return False
+        participant.outgoingtextmessage_set.create(
+            sent_at=dt,
+            message_text=message)
         self.say(message)
+        return True
 
     def send_text_to(self, participant, dt, message):
         if not participant.can_send_texts_at(dt):
@@ -91,6 +95,9 @@ class TextingTropo(tropo.Tropo):
         self.call(participant.phone_number.for_tropo, channel="TEXT")
         self.say(message)
         self.hangup()
+        participant.outgoingtextmessage_set.create(
+            sent_at=dt,
+            message_text=message)
         return True
 
 
@@ -172,7 +179,13 @@ class Participant(StampedModel):
         default=False)
 
     def can_send_texts_at(self, dt):
-        return not self.stopped
+        d1 = dt.date()
+        d2 = dt+datetime.timedelta(days=1)
+        text_count = self.outgoingtextmessage_set.filter(
+            sent_at__range=(d1, d2)).count()
+        return (
+            (not self.stopped) and
+            (text_count < self.experiment.max_messages_per_day))
 
     def assign_task_days(self, num):
         for i in range(num):
@@ -907,17 +920,12 @@ class IncomingTextMessage(StampedModel):
 class OutgoingTextMessage(StampedModel):
 
     participant = models.ForeignKey(
-        Participant,
-        blank=True,
-        null=True)
-
-    phone_number = PhoneNumberField(
-        max_length=255)
+        Participant)
 
     message_text = models.CharField(
         max_length=160)
 
-    tropo_json = models.TextField()
+    sent_at = models.DateTimeField()
 
 
 class OutgoingTropoSession(object):
