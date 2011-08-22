@@ -777,6 +777,13 @@ class SecheduleAndSendTest(TestCase):
         p = pf(pk=self.p1.pk)
         self.assertEqual(p.status, "complete")
 
+    def testGoToSleepDeletesOutstandingPermissions(self):
+        p = self.p1
+        t1 = self.td1.earliest_contact
+        p.gamepermission_set.create(scheduled_at=t1)
+        p.go_to_sleep(t1, False, True)
+        self.assertIsNone(p.gamepermission_set.newest())
+
     def testStartsGamePermission(self):
         p = self.p1
         pf = models.Participant.objects.get

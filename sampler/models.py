@@ -420,7 +420,7 @@ class Participant(StampedModel):
             self.save()
         self.get_or_create_contact()
 
-    def go_to_sleep(self, complete, skip_save=False):
+    def go_to_sleep(self, dt, complete, skip_save=False):
         prev_status = self.status
         self.next_contact_time = None
         if complete:
@@ -428,6 +428,13 @@ class Participant(StampedModel):
         else:
             self.status = 'sleeping'
         logger.debug("%s: %s -> %s" % (self, prev_status, self.status))
+        # It's important to delete unanswered GamePermissions, so they don't
+        # get used tomorrow.
+        del_count = self.gamepermission_set.filter(
+            answered_at=None).filter(
+            deleted_at=None).update(
+            deleted_at=dt)
+
         if not skip_save:
             self.save()
 
@@ -826,10 +833,10 @@ class TaskDay(StampedModel):
                 scheduled_at=game_time)
         self.participant.wake_up(dt, skip_save)
 
-    def end_day(self, td, skip_save=False):
-        self.set_status_for_time(td, skip_save)
+    def end_day(self, dt, skip_save=False):
+        self.set_status_for_time(dt, skip_save)
         complete = self.is_last_task_day()
-        self.participant.go_to_sleep(complete, skip_save)
+        self.participant.go_to_sleep(dt, complete, skip_save)
 
     def random_time_before_day_end(self, before_end_sec):
         day_len = (self.latest_contact - self.earliest_contact)
