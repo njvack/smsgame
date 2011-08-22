@@ -178,22 +178,6 @@ class Participant(StampedModel):
             range(self.experiment.day_count),
             self.experiment.game_count)
 
-    def get_or_create_contact(self):
-        obj = None
-        if (
-            self.status == 'baseline' or
-            self.status == 'game_inter_sample' or
-            self.status == 'game_post_sample'):
-            obj = self.experiencesample_set.newest()
-        elif (self.status == 'game_permission'):
-            obj = self.gamepermission_set.schedule_at(self.next_contact_time)
-        elif (self.status == 'game_guess'):
-            obj = self.hilowgame_set.schedule_at(self.next_contact_time)
-        elif (self.status == 'game_result'):
-            obj = self.hilowgame_set.newest()
-
-        return obj
-
     def _sleeping_contact_time(self, dt):
         delta = datetime.timedelta(minutes=random.randint(
             0, self.experiment.min_time_between_samples))
@@ -263,7 +247,6 @@ class Participant(StampedModel):
         self._fire_scheduled_state_transitions()
         if not skip_save:
             self.save()
-        return self.get_or_create_contact()
 
     def _fire_scheduled_state_transitions(self):
         # Only a few statuses get changed this way -- others result from
@@ -419,7 +402,6 @@ class Participant(StampedModel):
         self.status = 'baseline'
         if not skip_save:
             self.save()
-        self.get_or_create_contact()
 
     def go_to_sleep(self, dt, complete, skip_save=False):
         prev_status = self.status
@@ -552,15 +534,6 @@ class ParticipantExchangeManager(models.Manager):
             return self.active().latest('created_at')
         except:
             return None
-
-    def schedule_at(self, dt):
-        cur_obj = self.newest_if_unanswered()
-        if cur_obj is not None:
-            cur_obj.scheduled_at = dt
-            cur_obj.save()
-        else:
-            cur_obj = self.create(scheduled_at=dt)
-        return cur_obj
 
 
 class ParticipantExchange(StampedModel):

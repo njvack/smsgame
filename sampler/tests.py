@@ -67,31 +67,6 @@ class ParticipantTest(TestCase):
         self.assertEqual(1, self.p1.experiencesample_set.count())
         self.assertEqual(1, t.things_said)
 
-    def testGetOrGenerateContactPermission(self):
-        self.assertEqual(self.p1.gamepermission_set.count(), 0)
-        self.p1.status = 'game_permission'
-        self.p1.next_contact_time = self.td_start
-        self.p1.get_or_create_contact()
-        self.assertGreater(self.p1.gamepermission_set.count(), 0)
-
-    def testGetOrGenerateContactPermission(self):
-        self.assertEqual(self.p1.gamepermission_set.count(), 0)
-        self.p1.status = 'game_permission'
-        self.p1.next_contact_time = self.td_start
-        self.p1.get_or_create_contact()
-        self.assertGreater(self.p1.gamepermission_set.count(), 0)
-
-    def testGetOrGenerateContactHiLow(self):
-        self.assertEqual(self.p1.hilowgame_set.count(), 0)
-        self.p1.status = 'game_guess'
-        self.p1.next_contact_time = self.td_start
-        self.p1.get_or_create_contact()
-        self.assertEqual(self.p1.hilowgame_set.count(), 1)
-        self.p1.status = 'game_result'
-        self.p1.next_contact_time = self.td_end
-        self.p1.get_or_create_contact()
-        self.assertEqual(self.p1.hilowgame_set.count(), 1)
-
     def testNewestContactObjects(self):
         p = self.p1
         t = self.early
@@ -362,19 +337,6 @@ class ExperienceSampleTest(TestCase):
         self.es.deleted_at = self.now
         self.es.save()
         self.assertIsNone(models.ExperienceSample.objects.newest())
-
-    def testScheduleAtReschedules(self):
-        pk = self.es.pk
-        es = self.p1.experiencesample_set.schedule_at(self.later)
-        self.assertEqual(pk, es.pk)
-        self.assertEqual(es.scheduled_at, self.later)
-
-    def testSchedulsAtCreates(self):
-        pk = self.es.pk
-        self.es.answered_at = self.now
-        self.es.save()
-        e2 = self.p1.experiencesample_set.schedule_at(self.later)
-        self.assertNotEqual(pk, e2.pk)
 
 
 class GamePermissionTest(TestCase):
