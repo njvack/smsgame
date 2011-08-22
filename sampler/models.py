@@ -717,6 +717,18 @@ class HiLowGame(ParticipantExchange):
         return msg
 
 
+STOP_RE = re.compile(
+    r"""
+    (STOP|END|CANCEL|UNSUBSCRIBE|QUIT|STOP ALL)
+    """, (re.I | re.VERBOSE))
+
+
+class StopMessage(object):
+
+    def is_stop_message(self, msg):
+        return STOP_RE.match(msg)
+
+
 class TaskDayWaitingManager(models.Manager):
 
     def get_query_set(self):

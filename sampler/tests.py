@@ -769,3 +769,22 @@ class SecheduleAndSendTest(TestCase):
         self.cmd.handle_noargs(**self.opts(now=not_quite_end))
         p = pf(pk=self.p1.pk)
         self.assertEqual("baseline", p.status)
+
+
+class StopMessageText(TestCase):
+
+    def testHandlesStopMessages(self):
+        s = models.StopMessage()
+        self.assertTrue(bool(s.is_stop_message("STOP")))
+        self.assertTrue(bool(s.is_stop_message("stop")))
+        self.assertTrue(bool(s.is_stop_message("END")))
+        self.assertTrue(bool(s.is_stop_message("CANCEL")))
+        self.assertTrue(bool(s.is_stop_message("UNSUBSCRIBE")))
+        self.assertTrue(bool(s.is_stop_message("QUIT")))
+        self.assertTrue(bool(s.is_stop_message("STOP_ALL")))
+
+    def testHandlesNonStopMessages(self):
+        s = models.StopMessage()
+        self.assertFalse(bool(s.is_stop_message("19")))
+        self.assertFalse(bool(s.is_stop_message("low")))
+        self.assertFalse(bool(s.is_stop_message("y")))
