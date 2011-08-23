@@ -310,6 +310,21 @@ class ParticipantTest(TestCase):
         p.tropo_send_message(self.early, t, True)
         self.assertEqual(0, t.things_said)
 
+    def testMessageCountAndBonusCount(self):
+        p = self.p1
+        ontime = self.early
+        late = ontime+datetime.timedelta(seconds=self.exp.response_window+1)
+        p.experiencesample_set.create(sent_at=ontime, answered_at=ontime)
+        p.gamepermission_set.create(sent_at=ontime, answered_at=ontime)
+        p.hilowgame_set.create(sent_at=ontime, answered_at=ontime)
+        p.experiencesample_set.create(sent_at=ontime, answered_at=late)
+        p.gamepermission_set.create(sent_at=ontime, answered_at=late)
+        p.hilowgame_set.create(sent_at=ontime, answered_at=late)
+        p.experiencesample_set.create(sent_at=ontime)
+
+        self.assertEqual(7, p.message_count())
+        self.assertEqual(3, p.message_count_for_bonus())
+
 
 class ExperienceSampleTest(TestCase):
 

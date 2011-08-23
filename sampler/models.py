@@ -492,6 +492,20 @@ class Participant(StampedModel):
         if not skip_save:
             self.save()
 
+    def _all_messages(self):
+        lists = [s.all() for s in self.contact_sets]
+        messages = [item for sublist in lists for item in sublist]
+        return messages
+
+    def message_count(self):
+        return len(self._all_messages())
+
+    def message_count_for_bonus(self):
+        msgs = self._all_messages()
+        bonus_messages = [m for m in msgs if m.was_answered_within(
+            self.experiment.response_window)]
+        return len(bonus_messages)
+
     def __unicode__(self):
         return 'Participant %s (%s): %s' % (
             self.pk, self.status, self.phone_number)
@@ -606,6 +620,12 @@ class ParticipantExchange(StampedModel):
         self.sent_at = recorded_time
         if not skip_save:
             self.save()
+
+    def was_answered_within(self, seconds):
+        if self.answered_at is None:
+            return False
+        delta_sec = (self.answered_at - self.sent_at).seconds
+        return (delta_sec <= seconds)
 
     class Meta:
         abstract = True
