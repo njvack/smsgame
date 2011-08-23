@@ -536,6 +536,17 @@ class Participant(StampedModel):
             self.game_payout() +
             self.bonus_payout())
 
+    def total_payout_str(self):
+        out_str = ''
+        try:
+            out_str = "$%s" % (self.total_payout())
+        except:
+            out_str = "Error"
+        if not self.status == "complete":
+            out_str += " (Not yet complete!)"
+        return out_str
+    total_payout_str.short_description = "Total payout"
+
     def __unicode__(self):
         return 'Participant %s (%s): %s' % (
             self.pk, self.status, self.phone_number)
