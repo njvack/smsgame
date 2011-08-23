@@ -298,11 +298,6 @@ class Participant(StampedModel):
             logger.debug("%s: baseline -> game_permission" % self)
             self.status = "game_permission"
             self.next_contact_time = gp.scheduled_at
-            # There will also be an ExperienceSample wating out there --
-            # kill it
-            self.experiencesample_set.filter(
-                scheduled_at__gte=self.next_contact_time).filter(
-                answered_at=None).update(deleted_at=datetime.datetime.now())
         else:
             logger.debug("%s: staying baseline" % self)
 
