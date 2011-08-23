@@ -511,6 +511,11 @@ class Participant(StampedModel):
             float(self.message_count())/
             float(self.message_count_for_bonus()))
 
+    def won_game_count(self):
+        games = self.hilowgame_set.all()
+        won_games = [g for g in games if g.guess_was_correct]
+        return len(won_games)
+
     def __unicode__(self):
         return 'Participant %s (%s): %s' % (
             self.pk, self.status, self.phone_number)

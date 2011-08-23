@@ -327,6 +327,15 @@ class ParticipantTest(TestCase):
 
         self.assertEqual((float(7)/float(3)), p.bonus_fraction())
 
+    def testWonGameCount(self):
+        p = self.p1
+        t1 = self.early
+        p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=True)
+        p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=False)
+        p.hilowgame_set.create(sent_at=t1, correct_guess=9, guessed_low=True)
+        p.hilowgame_set.create(sent_at=t1, correct_guess=9, guessed_low=False)
+        self.assertEqual(2, p.won_game_count())
+
 
 class ExperienceSampleTest(TestCase):
 
