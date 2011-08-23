@@ -325,6 +325,8 @@ class ParticipantTest(TestCase):
         self.assertEqual(7, p.message_count())
         self.assertEqual(3, p.message_count_for_bonus())
 
+        self.assertEqual((float(7)/float(3)), p.bonus_fraction())
+
 
 class ExperienceSampleTest(TestCase):
 

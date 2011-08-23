@@ -506,6 +506,11 @@ class Participant(StampedModel):
             self.experiment.response_window)]
         return len(bonus_messages)
 
+    def bonus_fraction(self):
+        return (
+            float(self.message_count())/
+            float(self.message_count_for_bonus()))
+
     def __unicode__(self):
         return 'Participant %s (%s): %s' % (
             self.pk, self.status, self.phone_number)
