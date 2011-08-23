@@ -325,7 +325,29 @@ class ParticipantTest(TestCase):
         self.assertEqual(7, p.message_count())
         self.assertEqual(3, p.message_count_for_bonus())
 
-        self.assertEqual((float(7)/float(3)), p.bonus_fraction())
+        self.assertAlmostEqual((float(3)/float(7)*100), p.bonus_fraction())
+
+    def testQualifiesForBonus(self):
+        p = self.p1
+        ontime = self.early
+        late = ontime+datetime.timedelta(seconds=self.exp.response_window+1)
+        p.experiencesample_set.create(sent_at=ontime, answered_at=ontime)
+        p.gamepermission_set.create(sent_at=ontime, answered_at=ontime)
+        p.hilowgame_set.create(sent_at=ontime, answered_at=ontime)
+        p.experiencesample_set.create(sent_at=ontime, answered_at=late)
+        p.gamepermission_set.create(sent_at=ontime, answered_at=late)
+        p.hilowgame_set.create(sent_at=ontime, answered_at=late)
+        p.experiencesample_set.create(sent_at=ontime)
+
+        p.experiment.min_pct_answered_for_bonus = 45
+        p.experiment.save()
+        self.assertFalse(p.qualifies_for_bonus())
+        self.assertEqual(0, p.bonus_payout())
+
+        p.experiment.min_pct_answered_for_bonus = 40
+        p.experiment.save()
+        self.assertTrue(p.qualifies_for_bonus())
+        self.assertEqual(p.experiment.bonus_value, p.bonus_payout())
 
     def testWonGameCount(self):
         p = self.p1
@@ -335,6 +357,26 @@ class ParticipantTest(TestCase):
         p.hilowgame_set.create(sent_at=t1, correct_guess=9, guessed_low=True)
         p.hilowgame_set.create(sent_at=t1, correct_guess=9, guessed_low=False)
         self.assertEqual(2, p.won_game_count())
+
+    def testTotalWonInGames(self):
+        p = self.p1
+        t1 = self.early
+        p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=True)
+        p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=False)
+        self.assertEqual(self.exp.game_value, p.game_payout())
+
+    def testTotalPayout(self):
+        p = self.p1
+        t1 = self.early
+        p.hilowgame_set.create(
+            sent_at=t1, answered_at=t1, correct_guess=1, guessed_low=True)
+        p.hilowgame_set.create(
+            sent_at=t1, answered_at=t1, correct_guess=1, guessed_low=False)
+        total_amount = (
+            p.experiment.participation_value +
+            p.experiment.game_value +
+            p.experiment.bonus_value)
+        self.assertEqual(total_amount, p.total_payout())
 
 
 class ExperienceSampleTest(TestCase):

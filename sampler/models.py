@@ -507,14 +507,34 @@ class Participant(StampedModel):
         return len(bonus_messages)
 
     def bonus_fraction(self):
+        return (100*
+            float(self.message_count_for_bonus())/
+            float(self.message_count()))
+
+    def qualifies_for_bonus(self):
         return (
-            float(self.message_count())/
-            float(self.message_count_for_bonus()))
+            self.bonus_fraction() >=
+            self.experiment.min_pct_answered_for_bonus)
+
+    def bonus_payout(self):
+        if self.qualifies_for_bonus():
+            return self.experiment.bonus_value
+        else:
+            return 0
 
     def won_game_count(self):
         games = self.hilowgame_set.all()
         won_games = [g for g in games if g.guess_was_correct]
         return len(won_games)
+
+    def game_payout(self):
+        return self.experiment.game_value*self.won_game_count()
+
+    def total_payout(self):
+        return (
+            self.experiment.participation_value +
+            self.game_payout() +
+            self.bonus_payout())
 
     def __unicode__(self):
         return 'Participant %s (%s): %s' % (
