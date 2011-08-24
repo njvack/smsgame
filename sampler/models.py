@@ -657,8 +657,14 @@ class ParticipantExchange(StampedModel):
         null=True,
         blank=True)
 
+    participant_status_when_sent = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True)
+
     def mark_sent(self, recorded_time, skip_save=False):
         self.sent_at = recorded_time
+        self.participant_status_when_sent = self.participant.status
         if not skip_save:
             self.save()
 

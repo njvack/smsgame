@@ -421,6 +421,13 @@ class ExperienceSampleTest(TestCase):
         self.es.save()
         self.assertIsNone(models.ExperienceSample.objects.newest())
 
+    def testMarkSent(self):
+        es = self.es
+        self.assertNotEqual(self.p1.status, es.participant_status_when_sent)
+        es.mark_sent(self.later, True)
+        self.assertEqual(self.later, es.sent_at)
+        self.assertEqual(self.p1.status, es.participant_status_when_sent)
+
 
 class GamePermissionTest(TestCase):
 
