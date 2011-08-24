@@ -6,8 +6,16 @@ logger = logging.getLogger("smsgame")
 
 import datetime
 import json
+import csv
 
 from . import models
+
+
+def timefmt(dt):
+    try:
+        return dt.strftime("%Y-%m-%d %H:%I:%S")
+    except:
+        return dt
 
 
 def tropo(request):
@@ -61,6 +69,29 @@ def outgoing_message(request):
     now = datetime.datetime.now()
     ppt.tropo_send_message(now, t)
     response.write(t.RenderJson())
+    return response
+
+
+def experiencesamples_csv(request, slug):
+    experiment = get_object_or_404(models.Experiment, url_slug=slug)
+
+    response = HttpResponse(content_type='text/csv')
+    csv_out = csv.writer(response)
+    columns = ['experiment', 'participant', 'sample_id', 'status', 'sent_at',
+        'answered_at', 'positive', 'negative']
+    csv_out.writerow(columns)
+    for p in experiment.participant_set.all():
+        for es in p.experiencesample_set.all():
+            try:
+                row = [experiment.url_slug, p.pk, es.pk,
+                    es.participant_status_when_sent, timefmt(es.sent_at),
+                    timefmt(es.answered_at), es.positive_emotion,
+                    es.negative_emotion]
+                csv_out.writerow(row)
+            except Exception as e:
+                csv_out.writerow(['Error in sample %s' % es.pk])
+                logger.debug("Error! %s" % e)
+
     return response
 
 
