@@ -77,11 +77,11 @@ def experiencesamples_csv(request, slug):
 
     response = HttpResponse(content_type='text/csv')
     csv_out = csv.writer(response)
-    columns = ['experiment', 'participant', 'sample_id', 'status', 'sent_at',
+    columns = ['experiment', 'participant', 'sample_num', 'status', 'sent_at',
         'answered_at', 'positive', 'negative']
     csv_out.writerow(columns)
-    for p in experiment.participant_set.all():
-        for es in p.experiencesample_set.all():
+    for p in experiment.participant_set.all().order_by('created_at'):
+        for es in p.experiencesample_set.all().order_by('pk'):
             try:
                 row = [experiment.url_slug, p.pk, es.pk,
                     es.participant_status_when_sent, timefmt(es.sent_at),
