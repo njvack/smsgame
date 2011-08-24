@@ -556,7 +556,23 @@ class Participant(StampedModel):
         super(Participant, self).save(*args, **kwargs)
 
 
+def random_slug(slug_len):
+    valid_chars='bcdfghjkmnpqrstvz'
+
+    def fx():
+        vcl = len(valid_chars)
+        charnums = range(slug_len)
+        slug = ''.join([random.choice(valid_chars) for cn in range(slug_len)])
+        return slug
+    return fx
+
+
 class Experiment(StampedModel):
+
+    url_slug = models.SlugField(
+        max_length=50,
+        unique=True,
+        default=random_slug(10))
 
     day_count = models.IntegerField(
         "Total task days",

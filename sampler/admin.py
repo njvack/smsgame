@@ -7,7 +7,8 @@ class ExperimentAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Basic setup", {'fields':
             ((
-                'day_count',
+                'url_slug'),
+                ('day_count',
                 'game_count',
                 'max_messages_per_day'), )}),
         ('Messaging', {'fields':
