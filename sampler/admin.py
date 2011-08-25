@@ -54,7 +54,7 @@ class IncomingTextMessageAdmin(admin.ModelAdmin):
 
 class OutgoingTextMessageAdmin(admin.ModelAdmin):
 
-    list_display = ('participant', 'sent_at', '__str__')
+    list_display = ('participant', 'sent_at', 'message_text')
     list_filter = ('participant', )
 
     ordering = ('-sent_at', )
