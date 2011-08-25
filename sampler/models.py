@@ -369,10 +369,11 @@ class Participant(StampedModel):
 
     def _game_result_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest()
+        win_amount = self.experiment.game_value
         tropo_obj.send_text_to(
             self,
             dt,
-            hlg.get_result_message_mark_sent(dt))
+            hlg.get_result_message_mark_sent(dt, win_amount))
         self.status = "game_post_sample"
 
     def _game_post_sample_send(self, dt, tropo_obj):
@@ -828,11 +829,11 @@ class HiLowGame(ParticipantExchange):
         is_low = self.correct_guess < 5
         return (is_low == self.guessed_low)
 
-    def get_result_message_mark_sent(self, dt, skip_save=False):
+    def get_result_message_mark_sent(self, dt, win_dollars, skip_save=False):
         if self.guess_was_correct:
-            msg = "The number was %s. You guessed right! $20 has been added to your account." % self.correct_guess
+            msg = "The number was %s. You guessed right! $%s has been added to your account." % (self.correct_guess, win_dollars)
         else:
-            msg = "The number was %s. You guessed wrong. No money additional money has been added to your account." % self.correct_guess
+            msg = "The number was %s. You guessed wrong. No additional money has been added to your account." % self.correct_guess
         self.result_reported_at = dt
         if not skip_save:
             self.save()
