@@ -66,9 +66,15 @@ class ParticipantExchangeAdmin(admin.ModelAdmin):
     list_filter = ('participant', )
 
 
+class TaskDayAdmin(admin.ModelAdmin):
+
+    ordering = ('task_day', )
+    list_display = ('__str__', 'participant', 'task_day', 'is_game_day')
+    list_filter = ('participant', )
+
 admin.site.register(models.Experiment, ExperimentAdmin)
 admin.site.register(models.Participant, ParticipantAdmin)
-admin.site.register(models.TaskDay)
+admin.site.register(models.TaskDay, TaskDayAdmin)
 admin.site.register(models.IncomingTextMessage, IncomingTextMessageAdmin)
 admin.site.register(models.OutgoingTextMessage, OutgoingTextMessageAdmin)
 admin.site.register(models.ExperienceSample, ParticipantExchangeAdmin)
