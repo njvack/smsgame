@@ -44,6 +44,12 @@ class ParticipantTest(TestCase):
         self.p1.generate_contacts_and_update_status(self.td_start)
         self.assertEqual("game_permission", self.p1.status)
 
+    def testGenOrUpdateContactTimeCappedByGamePermission(self):
+        self.p1.status = 'baseline'
+        self.p1.gamepermission_set.create(scheduled_at=self.td_start)
+        self.p1.generate_contacts_and_update_status(self.td_start, True)
+        self.assertEqual(self.td_start, self.p1.next_contact_time)
+
     def testBaselineToPermissionTransition(self):
         self.p1.status = 'baseline'
         self.p1.next_contact_time = self.td_start

@@ -220,6 +220,9 @@ class Participant(StampedModel):
             self.experiment.min_time_between_samples,
             self.experiment.max_time_between_samples))
         nct = dt+delta
+        gp = self.gamepermission_set.newest()
+        if gp and gp.scheduled_at < nct:
+            nct = gp.scheduled_at
         return nct
 
     def _game_permission_time(self, dt):
@@ -297,7 +300,6 @@ class Participant(StampedModel):
         if gp and self.next_contact_time >= gp.scheduled_at:
             logger.debug("%s: baseline -> game_permission" % self)
             self.status = "game_permission"
-            self.next_contact_time = gp.scheduled_at
         else:
             logger.debug("%s: staying baseline" % self)
 
