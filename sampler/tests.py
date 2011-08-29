@@ -153,6 +153,10 @@ class ParticipantTest(TestCase):
         p.gamepermission_set.create(scheduled_at=self.early)
         p.tropo_answer("n", self.early, t, True)
         self.assertIsNotNone(p._game_permission_time(self.early))
+        p._game_permission_send(self.early, t)
+        self.assertEqual(1, t.things_said)
+        p._game_permission_incoming("y", self.early, t)
+        self.assertEqual("game_guess", p.status)
 
     def testAnswerChangesToGameIntersample(self):
         p = self.p1

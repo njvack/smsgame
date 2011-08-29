@@ -297,7 +297,7 @@ class Participant(StampedModel):
             return
         # If there's a GamePermission coming before our next_contact_time,
         # change our next_contact time and set our status to 'game_permission'
-        gp = self.gamepermission_set.newest_if_unanswered()
+        gp = self.gamepermission_set.newest()
         if gp and dt >= gp.scheduled_at:
             logger.debug("%s: baseline -> game_permission" % self)
             self.status = "game_permission"
@@ -348,7 +348,7 @@ class Participant(StampedModel):
             es.get_message_mark_sent(dt))
 
     def _game_permission_send(self, dt, tropo_obj):
-        gp = self.gamepermission_set.newest_if_unanswered()
+        gp = self.gamepermission_set.newest()
         tropo_obj.send_text_to(
             self,
             dt,
@@ -396,7 +396,7 @@ class Participant(StampedModel):
         return es
 
     def _game_permission_incoming(self, message_text, cur_time, tropo_obj):
-        gp = self.gamepermission_set.newest_if_unanswered()
+        gp = self.gamepermission_set.newest()
         gp.answer(message_text, cur_time)
         if gp.permissed:
             self.status = "game_guess"
