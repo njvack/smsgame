@@ -27,7 +27,7 @@ class ExperimentAdmin(admin.ModelAdmin):
 class TaskDayInlineAdmin(admin.TabularInline):
     model = models.TaskDay
 
-    fields = ('task_day', 'start_time', 'end_time')
+    fields = ('task_day', 'start_time', 'end_time', 'is_game_day')
 
     extra = 0
 
