@@ -146,6 +146,14 @@ class ParticipantTest(TestCase):
         self.assertEqual("game_guess", p.status)
         self.assertEqual(1, p.hilowgame_set.count())
 
+    def testAnswerGamePermissionNoAllowsFurtherContacts(self):
+        p = self.p1
+        t = mocks.Tropo()
+        p.status = 'game_permission'
+        p.gamepermission_set.create(scheduled_at=self.early)
+        p.tropo_answer("n", self.early, t, True)
+        self.assertIsNotNone(p._game_permission_time(self.early))
+
     def testAnswerChangesToGameIntersample(self):
         p = self.p1
         t = mocks.Tropo()

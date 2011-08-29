@@ -226,7 +226,8 @@ class Participant(StampedModel):
         return nct
 
     def _game_permission_time(self, dt):
-        game_permission = self.gamepermission_set.newest_if_unanswered()
+        game_permission = self.gamepermission_set.active().exclude(
+            permissed=True)[0]
         nct = dt
         if game_permission.sent_at:
             nct = nct+datetime.timedelta(minutes=15)
