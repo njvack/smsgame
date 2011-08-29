@@ -220,7 +220,7 @@ class Participant(StampedModel):
             self.experiment.min_time_between_samples,
             self.experiment.max_time_between_samples))
         nct = dt+delta
-        gp = self.gamepermission_set.newest()
+        gp = self.gamepermission_set.newest_if_unanswered()
         if gp and gp.scheduled_at < nct:
             nct = gp.scheduled_at
         return nct
@@ -278,32 +278,32 @@ class Participant(StampedModel):
         if self.next_contact_time is None:
             self.next_contact_time = self.generate_contact_time(dt)
             logger.debug("Generated NCT: %s" % self.next_contact_time)
-        self._fire_scheduled_state_transitions()
+        self._fire_scheduled_state_transitions(dt)
         if not skip_save:
             self.save()
 
-    def _fire_scheduled_state_transitions(self):
+    def _fire_scheduled_state_transitions(self, dt):
         # Only a few statuses get changed this way -- others result from
         # TaskDays starting/ending and responses to texts.
         status_fx_name = self.STATUSES[self.status].get('status_handler')
         if status_fx_name is None:
             logger.debug("status_handler is None")
             return
-        getattr(self, status_fx_name)()
+        getattr(self, status_fx_name)(dt)
 
-    def _baseline_transition(self):
+    def _baseline_transition(self, dt):
         if not self.status == 'baseline':
             return
         # If there's a GamePermission coming before our next_contact_time,
         # change our next_contact time and set our status to 'game_permission'
         gp = self.gamepermission_set.newest_if_unanswered()
-        if gp and self.next_contact_time >= gp.scheduled_at:
+        if gp and dt >= gp.scheduled_at:
             logger.debug("%s: baseline -> game_permission" % self)
             self.status = "game_permission"
         else:
             logger.debug("%s: staying baseline" % self)
 
-    def _game_permission_transition(self):
+    def _game_permission_transition(self, dt):
         """
         Checks to see that we really have enough time to run a game,
         return to baseline if not.
@@ -323,7 +323,7 @@ class Participant(StampedModel):
         else:
             logger.debug("%s: staying game_permission" % self)
 
-    def _game_post_sample_transition(self):
+    def _game_post_sample_transition(self, dt):
         """
         If the highlow game was reported more than POST_SAMPLE_PERIOD_SEC
         ago, go back to baseline

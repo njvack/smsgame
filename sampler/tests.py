@@ -54,8 +54,10 @@ class ParticipantTest(TestCase):
         self.p1.status = 'baseline'
         self.p1.next_contact_time = self.td_start
         self.p1.gamepermission_set.create(scheduled_at=self.td_start)
-        self.p1._fire_scheduled_state_transitions()
-        self.assertEqual("game_permission", self.p1.status)
+        self.p1._fire_scheduled_state_transitions(self.early)
+        self.assertEqual('baseline', self.p1.status)
+        self.p1._fire_scheduled_state_transitions(self.td_start)
+        self.assertEqual('game_permission', self.p1.status)
 
     def testSendIntersampleMakesExpSample(self):
         t = mocks.Tropo()
@@ -93,7 +95,7 @@ class ParticipantTest(TestCase):
         p.gamepermission_set.create(scheduled_at=self.early)
         p.next_contact_time = self.td_start
         p.save()
-        p._baseline_transition()
+        p._baseline_transition(self.td_start)
         self.assertEqual(p.status, 'game_permission')
 
     def testAnswerWithExpSampleAndGame(self):
