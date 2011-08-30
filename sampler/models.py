@@ -234,7 +234,11 @@ class Participant(StampedModel):
         return nct
 
     def _game_guess_time(self, dt):
-        return dt
+        gg = self.hilowgame_set.newest()
+        nct = dt
+        if gg.sent_at is not None:
+            nct = dt + datetime.timedelta(minutes=4)
+        return nct
 
     def _game_intersample_time(self, dt):
         nct = dt+datetime.timedelta(minutes=random.randint(1, 4))

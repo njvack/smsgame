@@ -158,6 +158,16 @@ class ParticipantTest(TestCase):
         p._game_permission_incoming("y", self.early, t)
         self.assertEqual("game_guess", p.status)
 
+    def testGameGuessTime(self):
+        p = self.p1
+        t1 = self.early
+        p.status = 'game_guess'
+        hlg = p.hilowgame_set.create()
+        self.assertEqual(t1, p._game_guess_time(t1))
+        hlg.sent_at = t1
+        hlg.save()
+        self.assertLess(t1, p._game_guess_time(t1))
+
     def testAnswerChangesToGameIntersample(self):
         p = self.p1
         t = mocks.Tropo()
