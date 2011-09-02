@@ -167,7 +167,8 @@ class Participant(StampedModel):
     status = models.CharField(
         max_length=20,
         default='sleeping',
-        validators=[validators.IncludesValidator(STATUSES.keys())])
+        validators=[validators.IncludesValidator(STATUSES.keys())],
+        editable=False)
 
     start_date = models.DateField()
 
