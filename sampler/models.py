@@ -282,9 +282,7 @@ class Participant(StampedModel):
         logger.debug("%s generating contacts at %s -- next_contact: %s" %
             (self, dt, self.next_contact_time))
         if self.next_contact_time is None:
-            logger.debug("About to generate")
             self.next_contact_time = self.generate_contact_time(dt)
-            logger.debug("Generated NCT: %s" % self.next_contact_time)
         self._fire_scheduled_state_transitions(dt)
         if not skip_save:
             self.save()
