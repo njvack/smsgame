@@ -35,7 +35,7 @@ class TaskDayInlineAdmin(admin.TabularInline):
 class ParticipantAdmin(admin.ModelAdmin):
     inlines = [TaskDayInlineAdmin]
 
-    readonly_fields = ['total_payout_str']
+    readonly_fields = ['status', 'total_payout_str']
 
     def save_model(self, request, obj, form, change):
         obj.save()
