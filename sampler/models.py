@@ -276,6 +276,7 @@ class Participant(StampedModel):
             logger.info("Time fx name is none!")
             return
         nct = getattr(self, time_fx_name)(dt)
+        logger.debug("Generated time: %s" % nct)
         return nct
 
     def generate_contacts_and_update_status(self, dt, skip_save=False):
