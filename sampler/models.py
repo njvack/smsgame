@@ -301,9 +301,8 @@ class Participant(StampedModel):
             return
         # If there's a GamePermission coming before our next_contact_time,
         # change our next_contact time and set our status to 'game_permission'
-        gp = self.gamepermission_set.newest()
+        gp = self.gamepermission_set.newest_if_unanswered()
         if gp and dt >= gp.scheduled_at:
-            logger.debug("%s: baseline -> game_permission" % self)
             self.set_status('game_permission')
         else:
             logger.debug("%s: staying baseline" % self)
@@ -319,7 +318,6 @@ class Participant(StampedModel):
             task_day=self.next_contact_time.date())
         if ((task_day.latest_contact - self.next_contact_time).seconds <
             GAME_PADDING_SEC):
-            logger.debug("%s: game_permission -> baseline" % self)
             self.set_status('baseline')
             # And delete our GamePermission
             gps = self.gamepermission_set.newest_if_unanswered()
@@ -338,7 +336,6 @@ class Participant(StampedModel):
         hlg = self.hilowgame_set.newest()
         if ((self.next_contact_time - hlg.result_reported_at).seconds <
             POST_SAMPLE_PERIOD_SEC):
-            logger.debug("%s: game_permission -> baseline" % self)
             self.set_status('baseline')
         else:
             logger.debug("%s: staying game_permission" % self)
@@ -441,7 +438,6 @@ class Participant(StampedModel):
     def wake_up(self, wakeup_time, skip_save=False):
         if not self.status == 'sleeping':
             return
-        logger.debug("%s: sleeping -> baseline" % self)
         self.next_contact_time = self.generate_contact_time(wakeup_time)
         self.set_status('baseline')
         if not skip_save:
