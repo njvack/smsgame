@@ -62,7 +62,8 @@ class OutgoingTextMessageAdmin(admin.ModelAdmin):
 
 class ParticipantExchangeAdmin(admin.ModelAdmin):
 
-    list_display = ('participant', 'sent_at', 'answered_at')
+    list_display = ('participant', 'scheduled_at', 'sent_at', 'answered_at')
+    ordering = ('-scheduled_at', )
     list_filter = ('participant', )
 
 
