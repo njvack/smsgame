@@ -13,8 +13,8 @@ class Command(NoArgsCommand):
     help = 'Generate and send messages that need it.'
 
     def handle_noargs(self, **options):
-        logger.info('schedule_and_send_messages')
         now = options.get('now') or datetime.datetime.now()
+        logger.info('schedule_and_send_messages: %s' % (now))
         tropo_requester = (
             options.get('tropo_reqester') or models.OutgoingTropoSession())
 
