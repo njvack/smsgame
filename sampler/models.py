@@ -304,7 +304,7 @@ class Participant(StampedModel):
         gp = self.gamepermission_set.newest()
         if gp and dt >= gp.scheduled_at:
             logger.debug("%s: baseline -> game_permission" % self)
-            self.status = "game_permission"
+            self.set_status('game_permission')
         else:
             logger.debug("%s: staying baseline" % self)
 
@@ -320,7 +320,7 @@ class Participant(StampedModel):
         if ((task_day.latest_contact - self.next_contact_time).seconds <
             GAME_PADDING_SEC):
             logger.debug("%s: game_permission -> baseline" % self)
-            self.status = "baseline"
+            self.set_status('baseline')
             # And delete our GamePermission
             gps = self.gamepermission_set.newest_if_unanswered()
             gps.deleted_at = datetime.datetime.now()
@@ -339,7 +339,7 @@ class Participant(StampedModel):
         if ((self.next_contact_time - hlg.result_reported_at).seconds <
             POST_SAMPLE_PERIOD_SEC):
             logger.debug("%s: game_permission -> baseline" % self)
-            self.status = "baseline"
+            self.set_status('baseline')
         else:
             logger.debug("%s: staying game_permission" % self)
 
@@ -372,7 +372,7 @@ class Participant(StampedModel):
             self,
             dt,
             es.get_message_mark_sent(dt))
-        self.status = "game_result"
+        self.set_status('game_result')
 
     def _game_result_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest()
@@ -381,7 +381,7 @@ class Participant(StampedModel):
             self,
             dt,
             hlg.get_result_message_mark_sent(dt, win_amount))
-        self.status = "game_post_sample"
+        self.set_status('game_post_sample')
 
     def _game_post_sample_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest()
@@ -392,7 +392,7 @@ class Participant(StampedModel):
             es.get_message_mark_sent(dt))
         if (dt-hlg.result_reported_at).seconds >= POST_SAMPLE_PERIOD_SEC:
             logger.debug("Post-sample period over, returning to baseline")
-            self.status = "baseline"
+            self.set_status('baseline')
 
     def _experince_sample_incoming(self, message_text, cur_time, tropo_obj):
         es = self.experiencesample_set.newest_if_unanswered()
@@ -403,14 +403,14 @@ class Participant(StampedModel):
         gp = self.gamepermission_set.newest()
         gp.answer(message_text, cur_time)
         if gp.permissed:
-            self.status = "game_guess"
+            self.set_status('game_guess')
             self.hilowgame_set.create(scheduled_at=cur_time)
         return gp
 
     def _game_guess_incoming(self, message_text, cur_time, tropo_obj):
         hlg = self.hilowgame_set.newest_if_unanswered()
         hlg.answer(message_text, cur_time) # Raises an exception if this fails
-        self.status = "game_inter_sample"
+        self.set_status('game_inter_sample')
         return hlg
 
     def request_tropo_contact(self, tropo_obj):
@@ -419,6 +419,10 @@ class Participant(StampedModel):
         """
         tropo_obj.request_session({
             'pk': self.pk})
+
+    def set_status(self, new_status):
+        logger.debug("%s: %s -> %s" % (self, self.status, new_status))
+        self.status = new_status
 
     @property
     def contact_sets(self):
@@ -439,18 +443,16 @@ class Participant(StampedModel):
             return
         logger.debug("%s: sleeping -> baseline" % self)
         self.next_contact_time = self.generate_contact_time(wakeup_time)
-        self.status = 'baseline'
+        self.set_status('baseline')
         if not skip_save:
             self.save()
 
     def go_to_sleep(self, dt, complete, skip_save=False):
-        prev_status = self.status
         self.next_contact_time = None
         if complete:
-            self.status = 'complete'
+            self.set_status('complete')
         else:
-            self.status = 'sleeping'
-        logger.debug("%s: %s -> %s" % (self, prev_status, self.status))
+            self.set_status('sleeping')
         # It's important to delete unanswered GamePermissions, so they don't
         # get used tomorrow.
         del_count = self.gamepermission_set.filter(
@@ -496,7 +498,7 @@ class Participant(StampedModel):
             except Exception as e:
                 logger.warn("tropo_send_message went wrong: %s" % e.message)
                 logger.warn("returning to baseline")
-                self.status = 'baseline'
+                self.set_status('baseline')
         if not skip_save:
             self.save()
 
