@@ -67,6 +67,27 @@ class ParticipantExchangeAdmin(admin.ModelAdmin):
     list_filter = ('participant', )
 
 
+class HiLowGameAdmin(ParticipantExchangeAdmin):
+
+    list_display = (
+        'participant', 'scheduled_at', 'sent_at', 'answered_at',
+        'correct_guess', 'guessed_low', 'guess_was_correct')
+
+
+class ExperienceSampleAdmin(ParticipantExchangeAdmin):
+
+    list_display = (
+        'participant', 'scheduled_at', 'sent_at', 'answered_at',
+        'positive_emotion', 'negative_emotion')
+
+
+class GamePermissionAdmin(ParticipantExchangeAdmin):
+
+    list_display = (
+        'participant', 'scheduled_at', 'sent_at', 'answered_at',
+        'permissed')
+
+
 class TaskDayAdmin(admin.ModelAdmin):
 
     ordering = ('task_day', )
@@ -78,6 +99,6 @@ admin.site.register(models.Participant, ParticipantAdmin)
 admin.site.register(models.TaskDay, TaskDayAdmin)
 admin.site.register(models.IncomingTextMessage, IncomingTextMessageAdmin)
 admin.site.register(models.OutgoingTextMessage, OutgoingTextMessageAdmin)
-admin.site.register(models.ExperienceSample, ParticipantExchangeAdmin)
-admin.site.register(models.HiLowGame, ParticipantExchangeAdmin)
-admin.site.register(models.GamePermission, ParticipantExchangeAdmin)
+admin.site.register(models.ExperienceSample, ExperienceSampleAdmin)
+admin.site.register(models.HiLowGame, HiLowGameAdmin)
+admin.site.register(models.GamePermission, GamePermissionAdmin)
