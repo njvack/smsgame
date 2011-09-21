@@ -101,7 +101,8 @@ def hilowgames_csv(request, slug):
     response = HttpResponse(content_type='text/csv')
     csv_out = csv.writer(response)
     columns = ['experiment', 'participant', 'game_num', 'status', 'sent_at',
-        'answered_at', 'reported_at', 'correct_answer', 'guessed_low']
+        'answered_at', 'reported_at', 'correct_answer', 'guessed_low',
+        'was_correct']
     csv_out.writerow(columns)
     for p in experiment.participant_set.all().order_by('created_at'):
         for g in p.hilowgame_set.all().order_by('pk'):
@@ -109,7 +110,7 @@ def hilowgames_csv(request, slug):
                 row = [experiment.url_slug, p.pk, g.pk,
                     g.participant_status_when_sent, timefmt(g.sent_at),
                     timefmt(g.answered_at), timefmt(g.result_reported_at),
-                    g.correct_guess, g.guessed_low]
+                    g.correct_guess, g.guessed_low, g.guess_was_correct]
                 csv_out.writerow(row)
             except Exception as e:
                 csv_out.writerow(['Error in game %s: %s' % (g.pk, e)])
