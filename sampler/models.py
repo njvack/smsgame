@@ -745,7 +745,7 @@ class ExperienceSample(ParticipantExchange):
         return "%s %s" % (self.positive_emotion, self.negative_emotion)
 
     def get_message_mark_sent(self, dt, skip_save=False):
-        self.sent_at = dt
+        self.mark_sent(dt, True)
         if not skip_save:
             self.save()
         return "Enter how much positive emotion (1-9) and negative emotion (1-9) you are feeling right now."
@@ -757,7 +757,7 @@ class GamePermission(ParticipantExchange):
         default=False)
 
     def get_message_mark_sent(self, dt, skip_save=False):
-        self.sent_at = dt
+        self.mark_sent(dt, True)
         if not skip_save:
             self.save()
         return "Are you ready to play a game and answer more text messages for the next two hours? (y/n)"
@@ -824,7 +824,7 @@ class HiLowGame(ParticipantExchange):
             self.save()
 
     def get_message_mark_sent(self, dt, skip_save=False):
-        self.sent_at = dt
+        self.mark_sent(dt, True)
         if not skip_save:
             self.save()
         return "We generated a number between 1 and 9. Guess if it's lower or higher than 5. (low/high)"
