@@ -13,7 +13,7 @@ from . import models
 
 def timefmt(dt):
     try:
-        return dt.strftime("%Y-%m-%d %H:%I:%S")
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
     except:
         return dt
 
