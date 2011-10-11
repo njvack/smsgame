@@ -93,11 +93,8 @@ class TextingTropo(tropo.Tropo):
                 (participant, dt))
             return False
         self.call(participant.phone_number.for_tropo, channel="TEXT")
-        self.say(message)
+        self.say_to(participant, dt, message)
         self.hangup()
-        participant.outgoingtextmessage_set.create(
-            sent_at=dt,
-            message_text=message)
         return True
 
 
