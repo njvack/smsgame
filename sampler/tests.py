@@ -341,44 +341,44 @@ class ParticipantTest(TestCase):
         p.tropo_send_message(self.early, t, True)
         self.assertEqual(0, t.things_said)
 
-    def testMessageCountAndBonusCount(self):
-        p = self.p1
-        ontime = self.early
-        late = ontime+datetime.timedelta(seconds=self.exp.response_window+1)
-        p.experiencesample_set.create(sent_at=ontime, answered_at=ontime)
-        p.gamepermission_set.create(sent_at=ontime, answered_at=ontime)
-        p.hilowgame_set.create(sent_at=ontime, answered_at=ontime)
-        p.experiencesample_set.create(sent_at=ontime, answered_at=late)
-        p.gamepermission_set.create(sent_at=ontime, answered_at=late)
-        p.hilowgame_set.create(sent_at=ontime, answered_at=late)
-        p.experiencesample_set.create(sent_at=ontime)
+    #def testMessageCountAndBonusCount(self):
+    #    p = self.p1
+    #    ontime = self.early
+    #    late = ontime+datetime.timedelta(seconds=self.exp.response_window+1)
+    #    p.experiencesample_set.create(sent_at=ontime, answered_at=ontime)
+    #    p.gamepermission_set.create(sent_at=ontime, answered_at=ontime)
+    #    p.hilowgame_set.create(sent_at=ontime, answered_at=ontime)
+    #    p.experiencesample_set.create(sent_at=ontime, answered_at=late)
+    #    p.gamepermission_set.create(sent_at=ontime, answered_at=late)
+    #    p.hilowgame_set.create(sent_at=ontime, answered_at=late)
+    #    p.experiencesample_set.create(sent_at=ontime)
+    #
+    #    self.assertEqual(7, p.message_count())
+    #    self.assertEqual(3, p.message_count_for_bonus())
+    #
+    #    self.assertAlmostEqual((float(3)/float(7)*100), p.bonus_fraction())
 
-        self.assertEqual(7, p.message_count())
-        self.assertEqual(3, p.message_count_for_bonus())
-
-        self.assertAlmostEqual((float(3)/float(7)*100), p.bonus_fraction())
-
-    def testQualifiesForBonus(self):
-        p = self.p1
-        ontime = self.early
-        late = ontime+datetime.timedelta(seconds=self.exp.response_window+1)
-        p.experiencesample_set.create(sent_at=ontime, answered_at=ontime)
-        p.gamepermission_set.create(sent_at=ontime, answered_at=ontime)
-        p.hilowgame_set.create(sent_at=ontime, answered_at=ontime)
-        p.experiencesample_set.create(sent_at=ontime, answered_at=late)
-        p.gamepermission_set.create(sent_at=ontime, answered_at=late)
-        p.hilowgame_set.create(sent_at=ontime, answered_at=late)
-        p.experiencesample_set.create(sent_at=ontime)
-
-        p.experiment.min_pct_answered_for_bonus = 45
-        p.experiment.save()
-        self.assertFalse(p.qualifies_for_bonus())
-        self.assertEqual(0, p.bonus_payout())
-
-        p.experiment.min_pct_answered_for_bonus = 40
-        p.experiment.save()
-        self.assertTrue(p.qualifies_for_bonus())
-        self.assertEqual(p.experiment.bonus_value, p.bonus_payout())
+    #def testQualifiesForBonus(self):
+    #    p = self.p1
+    #    ontime = self.early
+    #    late = ontime+datetime.timedelta(seconds=self.exp.response_window+1)
+    #    p.experiencesample_set.create(sent_at=ontime, answered_at=ontime)
+    #    p.gamepermission_set.create(sent_at=ontime, answered_at=ontime)
+    #    p.hilowgame_set.create(sent_at=ontime, answered_at=ontime)
+    #    p.experiencesample_set.create(sent_at=ontime, answered_at=late)
+    #    p.gamepermission_set.create(sent_at=ontime, answered_at=late)
+    #    p.hilowgame_set.create(sent_at=ontime, answered_at=late)
+    #    p.experiencesample_set.create(sent_at=ontime)
+    #
+    #    p.experiment.min_pct_answered_for_bonus = 45
+    #    p.experiment.save()
+    #    self.assertFalse(p.qualifies_for_bonus())
+    #    self.assertEqual(0, p.bonus_payout())
+    #
+    #    p.experiment.min_pct_answered_for_bonus = 40
+    #    p.experiment.save()
+    #    self.assertTrue(p.qualifies_for_bonus())
+    #    self.assertEqual(p.experiment.bonus_value, p.bonus_payout())
 
     def testWonGameCount(self):
         p = self.p1
@@ -416,7 +416,7 @@ class ExperienceSampleTest(TestCase):
         self.today = datetime.date(2011, 7, 1)
         self.now = datetime.datetime(2011, 7, 1, 9, 30)
         self.later = datetime.datetime(2011, 7, 1, 3, 30)
-        self.exp = models.Experiment.objects.create()
+        self.exp = models.Experiment.objects.create(response_window=60)
         self.p1 = models.Participant.objects.create(
             experiment=self.exp, start_date=self.today,
             phone_number='6085551212')
@@ -459,6 +459,17 @@ class ExperienceSampleTest(TestCase):
         self.assertEqual(self.later, es.sent_at)
         self.assertEqual(self.p1.status, es.participant_status_when_sent)
 
+    def testWasAnsweredWithinWindow(self):
+
+        es = models.ExperienceSample(participant=self.p1)
+        early = self.now + datetime.timedelta(seconds=60)
+        late = self.now + datetime.timedelta(seconds=61)
+        es.sent_at = self.now
+        es.answered_at = early
+        self.assertTrue(es.was_answered_within_window())
+        es.answered_at = late
+        self.assertFalse(es.was_answered_within_window())
+
 
 class GamePermissionTest(TestCase):
 
@@ -487,6 +498,21 @@ class GamePermissionTest(TestCase):
         self.assertRaises(err, self.gp.answer, "", self.now, True)
         self.assertRaises(err, self.gp.answer, "foo", self.now, True)
         self.assertIsNone(self.gp.answered_at)
+
+    def testWasAnsweredWithinWindow(self):
+        exp = models.Experiment.objects.create(response_window=60)
+        p1 = models.Participant.objects.create(
+            experiment=exp, start_date=self.now.date(),
+            phone_number='6085551212')
+
+        gp = models.GamePermission(participant=p1)
+        early = self.now + datetime.timedelta(seconds=60)
+        late = self.now + datetime.timedelta(seconds=61)
+        gp.sent_at = self.now
+        gp.answered_at = early
+        self.assertTrue(gp.was_answered_within_window())
+        gp.answered_at = late
+        self.assertFalse(gp.was_answered_within_window())
 
 
 class HiLowGameTest(TestCase):
@@ -529,6 +555,21 @@ class HiLowGameTest(TestCase):
         self.assertTrue(hlg.guess_was_correct)
         hlg.answer("low", self.now, True)
         self.assertFalse(hlg.guess_was_correct)
+
+    def testWasAnsweredWithinWindow(self):
+        exp = models.Experiment.objects.create(response_window=60)
+        p1 = models.Participant.objects.create(
+            experiment=exp, start_date=self.now.date(),
+            phone_number='6085551212')
+
+        hlg = models.HiLowGame(participant=p1)
+        early = self.now + datetime.timedelta(seconds=60)
+        late = self.now + datetime.timedelta(seconds=61)
+        hlg.sent_at = self.now
+        hlg.answered_at = early
+        self.assertTrue(hlg.was_answered_within_window())
+        hlg.answered_at = late
+        self.assertFalse(hlg.was_answered_within_window())
 
 
 class IncomingTextTest(TestCase):

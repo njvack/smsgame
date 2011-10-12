@@ -605,8 +605,8 @@ class Experiment(StampedModel):
         decimal_places=2)
 
     bonus_value = models.DecimalField(
-        help_text="(Dollars)",
-        default=40.00,
+        help_text="(Dollars, per day)",
+        default=4.00,
         max_digits=5,
         decimal_places=2)
 
@@ -685,6 +685,10 @@ class ParticipantExchange(StampedModel):
             return False
         delta_sec = (self.answered_at - self.sent_at).seconds
         return (delta_sec <= seconds)
+
+    def was_answered_within_window(self):
+        return self.was_answered_within(
+            self.participant.experiment.response_window)
 
     class Meta:
         abstract = True
