@@ -16,7 +16,7 @@ logger = logging.getLogger("smsgame")
 
 SEC_IN_MIN = 60
 GAME_PADDING_SEC = 150 * SEC_IN_MIN
-POST_SAMPLE_PERIOD_SEC = 120 * SEC_IN_MIN
+POST_SAMPLE_PERIOD_SEC = 90 * SEC_IN_MIN # 90 minutes
 
 
 class PhoneNumber(object):
@@ -251,23 +251,9 @@ class Participant(StampedModel):
         return nct
 
     def _game_post_sample_time(self, dt):
-        # Immediate if it's the first sample
-        # 12 += 3 if it's in the first hour
-        # 23 += 5 if it's in the second hour
-        # And it shouldn't run longer than that.
-        nct = dt
-        game = self.hilowgame_set.newest()
-        # Not having a game is impossible, should be an error -- let it.
-        rep_delta = (dt-game.result_reported_at).seconds
-        samples = self.experiencesample_set.filter(
-            scheduled_at__gt=game.result_reported_at)
-        if samples.count() == 0:
-            pass
-        elif rep_delta < 60*SEC_IN_MIN:
-            nct = dt+datetime.timedelta(minutes=random.randint(9, 15))
-        else:
-            nct = dt+datetime.timedelta(minutes=random.randint(18, 28))
-        return nct
+        # 12 += 3 minutes.
+        # And it shouldn't run longer 90 minutes.
+        return dt+datetime.timedelta(minutes=random.randint(9, 15))
 
     def generate_contact_time(self, dt):
         time_fx_name = self.STATUSES[self.status].get('time_fx')
