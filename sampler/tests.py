@@ -237,7 +237,8 @@ class ParticipantTest(TestCase):
         self.assertEqual('game_post_sample', p.status)
         self.assertIsNotNone(p.hilowgame_set.newest().result_reported_at)
         self.assertEqual(t.called, p.phone_number.for_tropo)
-        self.assertEqual(1, t.things_said)
+        self.assertEqual(2, t.things_said) # This will also send an ES
+        self.assertEqual(1, p.experiencesample_set.count())
 
     def testSendingChangesStatusFromPostSampleToBaseline(self):
         p = self.p1
@@ -806,7 +807,7 @@ class IncludesValidatorTest(TestCase):
 class TextingTropoTest(TestCase):
 
     def setUp(self):
-        self.exp = models.Experiment.objects.create(max_messages_per_day=1)
+        self.exp = models.Experiment.objects.create(max_messages_per_day=2)
         self.today = datetime.date(2011, 7, 1)
         self.p1 = models.Participant.objects.create(
             experiment=self.exp,
@@ -839,9 +840,19 @@ class TextingTropoTest(TestCase):
         p = self.p1
         t = mocks.Tropo()
         self.assertTrue(t.say_to(p, self.early, "Woo"))
+        self.assertTrue(t.say_to(p, self.early, "Woo"))
         self.assertFalse(t.say_to(p, self.early, "Woo"))
-        self.assertEqual(1, t.things_said)
-        self.assertEqual(1, p.outgoingtextmessage_set.count())
+        self.assertEqual(2, t.things_said)
+        self.assertEqual(2, p.outgoingtextmessage_set.count())
+
+    def testSendMessagesAllowsMultiple(self):
+        p = self.p1
+        t = mocks.Tropo()
+        messages = ['foo', 'bar', 'baz']
+        count = t.send_texts_to(p, self.early, messages)
+        self.assertEqual(self.exp.max_messages_per_day, count)
+        self.assertEqual(count, t.things_said)
+        self.assertEqual(count, p.outgoingtextmessage_set.count())
 
 
 class SecheduleAndSendTest(TestCase):

@@ -88,14 +88,19 @@ class TextingTropo(tropo.Tropo):
         return True
 
     def send_text_to(self, participant, dt, message):
-        if not participant.can_send_texts_at(dt):
-            logger.debug("send_text_to: %s can't get messages more at %s" %
-                (participant, dt))
-            return False
         self.call(participant.phone_number.for_tropo, channel="TEXT")
-        self.say_to(participant, dt, message)
+        result = self.say_to(participant, dt, message)
         self.hangup()
-        return True
+        return result
+
+    def send_texts_to(self, participant, dt, messages):
+        count = 0
+        self.call(participant.phone_number.for_tropo, channel="TEXT")
+        for msg in messages:
+            if self.say_to(participant, dt, msg):
+                count += 1
+        self.hangup()
+        return count
 
 
 class PhoneNumberField(models.CharField):
@@ -371,10 +376,12 @@ class Participant(StampedModel):
     def _game_result_send(self, dt, tropo_obj):
         hlg = self.hilowgame_set.newest()
         win_amount = self.experiment.game_value
-        tropo_obj.send_text_to(
+        es = self.experiencesample_set.create(scheduled_at=dt)
+        tropo_obj.send_texts_to(
             self,
             dt,
-            hlg.get_result_message_mark_sent(dt, win_amount))
+            [hlg.get_result_message_mark_sent(dt, win_amount),
+            es.get_message_mark_sent(dt)])
         self.set_status('game_post_sample')
 
     def _game_post_sample_send(self, dt, tropo_obj):
