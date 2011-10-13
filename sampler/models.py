@@ -958,6 +958,25 @@ class TaskDay(StampedModel):
         last_task_day = self.participant.taskday_set.latest('task_day')
         return self == last_task_day
 
+    def _participantexchange_set(self, specific_set):
+        d2 = self.task_day + datetime.timedelta(days=1)
+        return specific_set.filter(sent_at__range=(self.task_day, d2))
+
+    @property
+    def experiencesample_set(self):
+        return self._participantexchange_set(
+            self.participant.experiencesample_set)
+
+    @property
+    def gamepermission_set(self):
+        return self._participantexchange_set(
+            self.participant.gamepermission_set)
+
+    @property
+    def hilowgame_set(self):
+        return self._participantexchange_set(
+            self.participant.hilowgame_set)
+
     def __set_contact_fields(self):
         self.earliest_contact = datetime.datetime(
             self.task_day.year, self.task_day.month, self.task_day.day,

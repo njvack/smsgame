@@ -657,6 +657,7 @@ class TaskDayTest(TestCase):
         self.td_start = datetime.datetime(2011, 7, 1, 9, 30)
         self.td_end = datetime.datetime(2011, 7, 1, 19, 00)
         self.late = datetime.datetime(2011, 7, 1, 20, 00)
+        self.early_tomorrow = datetime.datetime(2011, 7, 2, 8, 30)
         self.td1 = self.p1.taskday_set.create(
             task_day=self.td_start.date(),
             start_time=self.td_start.time(),
@@ -722,6 +723,27 @@ class TaskDayTest(TestCase):
         self.assertEqual(0, self.p1.gamepermission_set.count())
         self.td1.start_day(self.td_start)
         self.assertEqual(1, self.p1.gamepermission_set.count())
+
+    def testFindsExperienceSamples(self):
+        es1 = self.p1.experiencesample_set.create(sent_at=self.early)
+        es2 = self.p1.experiencesample_set.create(sent_at=self.early_tomorrow)
+        today_samples = self.td1.experiencesample_set.all()
+        self.assertEqual(1, today_samples.count())
+        self.assertEqual(es1, today_samples[0])
+
+    def testFindsGamePermissions(self):
+        gp1 = self.p1.gamepermission_set.create(sent_at=self.early)
+        gp2 = self.p1.gamepermission_set.create(sent_at=self.early_tomorrow)
+        today_samples = self.td1.gamepermission_set.all()
+        self.assertEqual(1, today_samples.count())
+        self.assertEqual(gp1, today_samples[0])
+
+    def testFindsHiLowGames(self):
+        hg1 = self.p1.hilowgame_set.create(sent_at=self.early)
+        hg2 = self.p1.hilowgame_set.create(sent_at=self.early_tomorrow)
+        today_samples = self.td1.hilowgame_set.all()
+        self.assertEqual(1, today_samples.count())
+        self.assertEqual(hg1, today_samples[0])
 
 
 class TropoRequestTest(TestCase):
