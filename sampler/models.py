@@ -496,27 +496,15 @@ class Participant(StampedModel):
     def message_count(self):
         return len(self._all_messages())
 
-    def message_count_for_bonus(self):
-        msgs = self._all_messages()
-        bonus_messages = [m for m in msgs if m.was_answered_within(
-            self.experiment.response_window)]
-        return len(bonus_messages)
-
-    def bonus_fraction(self):
-        return (100*
-            float(self.message_count_for_bonus())/
-            float(self.message_count()))
-
-    def qualifies_for_bonus(self):
-        return (
-            self.bonus_fraction() >=
-            self.experiment.min_pct_answered_for_bonus)
-
     def bonus_payout(self):
-        if self.qualifies_for_bonus():
-            return self.experiment.bonus_value
-        else:
-            return 0
+        return (self.experiment.bonus_value * self.task_day_count_for_bonus())
+
+    def task_days_for_bonus(self):
+        return [td for td in self.taskday_set.all()
+            if td.qualifies_for_bonus()]
+
+    def task_day_count_for_bonus(self):
+        return len(self.task_days_for_bonus())
 
     def won_game_count(self):
         games = self.hilowgame_set.all()
@@ -979,6 +967,8 @@ class TaskDay(StampedModel):
         return len(self.messages_for_bonus())
 
     def qualified_frac(self):
+        if (self.message_count() == 0):
+            return 0
         return 100*float(self.message_count_for_bonus())/self.message_count()
 
     def qualifies_for_bonus(self):

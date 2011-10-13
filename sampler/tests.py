@@ -18,7 +18,8 @@ class ParticipantTest(TestCase):
     def setUp(self):
         random.seed(0)
         self.today = datetime.date(2011, 7, 1) # Not really today.
-        self.exp = models.Experiment.objects.create()
+        self.exp = models.Experiment.objects.create(
+            min_pct_answered_for_bonus=50)
         self.p1 = models.Participant.objects.create(
             experiment=self.exp, start_date=self.today,
             phone_number='6085551212')
@@ -26,10 +27,17 @@ class ParticipantTest(TestCase):
         self.td_start = datetime.datetime(2011, 7, 1, 9, 30)
         self.td_end = datetime.datetime(2011, 7, 1, 19, 00)
         self.late = datetime.datetime(2011, 7, 1, 20, 00)
+        self.td2_start = datetime.datetime(2011, 7, 2, 9, 30)
+        self.td2_end = datetime.datetime(2011, 7, 2, 19, 00)
         self.td1 = self.p1.taskday_set.create(
             task_day=self.td_start.date(),
             start_time=self.td_start.time(),
             end_time=self.td_end.time())
+
+        self.td2 = self.p1.taskday_set.create(
+            task_day=self.td2_start.date(),
+            start_time=self.td2_start.time(),
+            end_time=self.td2_end.time())
 
     def testPptDoesntAllowCrazyStatus(self):
         p1 = self.p1
@@ -341,6 +349,23 @@ class ParticipantTest(TestCase):
         p.tropo_send_message(self.early, t, True)
         self.assertEqual(0, t.things_said)
 
+    def testBonusPayout(self):
+        p = self.p1
+        td1 = self.td1
+        td1_early = self.td_start
+        td1_late = self.td_start + datetime.timedelta(
+            seconds=self.exp.response_window+1)
+        td2_early = self.td2_start
+        td2_late = self.td2_start + datetime.timedelta(
+            seconds=self.exp.response_window+1)
+
+        # It's fine if they're answered when they're sent
+        p.experiencesample_set.create(sent_at=td1_early, answered_at=td1_early)
+        p.experiencesample_set.create(sent_at=td2_early, answered_at=td2_late)
+
+        self.assertEqual(1, p.task_day_count_for_bonus())
+        self.assertEqual(self.exp.bonus_value, p.bonus_payout())
+
     def testWonGameCount(self):
         p = self.p1
         t1 = self.early
@@ -360,6 +385,7 @@ class ParticipantTest(TestCase):
     def testTotalPayout(self):
         p = self.p1
         t1 = self.early
+
         p.hilowgame_set.create(
             sent_at=t1, answered_at=t1, correct_guess=1, guessed_low=True)
         p.hilowgame_set.create(
