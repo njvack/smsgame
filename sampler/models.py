@@ -958,6 +958,33 @@ class TaskDay(StampedModel):
         last_task_day = self.participant.taskday_set.latest('task_day')
         return self == last_task_day
 
+    def _all_messages(self):
+        sets = [
+            self.experiencesample_set,
+            self.gamepermission_set,
+            self.hilowgame_set]
+        lists = [s.all() for s in sets]
+        return [item for sublist in lists for item in sublist]
+
+    def message_count(self):
+        return len(self._all_messages())
+
+    def messages_for_bonus(self):
+        msgs = self._all_messages()
+        bonus_messages = [m for m in msgs if m.was_answered_within(
+            self.participant.experiment.response_window)]
+        return bonus_messages
+
+    def message_count_for_bonus(self):
+        return len(self.messages_for_bonus())
+
+    def qualified_frac(self):
+        return 100*float(self.message_count_for_bonus())/self.message_count()
+
+    def qualifies_for_bonus(self):
+        return (self.qualified_frac() >=
+            self.participant.experiment.min_pct_answered_for_bonus)
+
     def _participantexchange_set(self, specific_set):
         d2 = self.task_day + datetime.timedelta(days=1)
         return specific_set.filter(sent_at__range=(self.task_day, d2))

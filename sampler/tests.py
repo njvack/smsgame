@@ -341,45 +341,6 @@ class ParticipantTest(TestCase):
         p.tropo_send_message(self.early, t, True)
         self.assertEqual(0, t.things_said)
 
-    #def testMessageCountAndBonusCount(self):
-    #    p = self.p1
-    #    ontime = self.early
-    #    late = ontime+datetime.timedelta(seconds=self.exp.response_window+1)
-    #    p.experiencesample_set.create(sent_at=ontime, answered_at=ontime)
-    #    p.gamepermission_set.create(sent_at=ontime, answered_at=ontime)
-    #    p.hilowgame_set.create(sent_at=ontime, answered_at=ontime)
-    #    p.experiencesample_set.create(sent_at=ontime, answered_at=late)
-    #    p.gamepermission_set.create(sent_at=ontime, answered_at=late)
-    #    p.hilowgame_set.create(sent_at=ontime, answered_at=late)
-    #    p.experiencesample_set.create(sent_at=ontime)
-    #
-    #    self.assertEqual(7, p.message_count())
-    #    self.assertEqual(3, p.message_count_for_bonus())
-    #
-    #    self.assertAlmostEqual((float(3)/float(7)*100), p.bonus_fraction())
-
-    #def testQualifiesForBonus(self):
-    #    p = self.p1
-    #    ontime = self.early
-    #    late = ontime+datetime.timedelta(seconds=self.exp.response_window+1)
-    #    p.experiencesample_set.create(sent_at=ontime, answered_at=ontime)
-    #    p.gamepermission_set.create(sent_at=ontime, answered_at=ontime)
-    #    p.hilowgame_set.create(sent_at=ontime, answered_at=ontime)
-    #    p.experiencesample_set.create(sent_at=ontime, answered_at=late)
-    #    p.gamepermission_set.create(sent_at=ontime, answered_at=late)
-    #    p.hilowgame_set.create(sent_at=ontime, answered_at=late)
-    #    p.experiencesample_set.create(sent_at=ontime)
-    #
-    #    p.experiment.min_pct_answered_for_bonus = 45
-    #    p.experiment.save()
-    #    self.assertFalse(p.qualifies_for_bonus())
-    #    self.assertEqual(0, p.bonus_payout())
-    #
-    #    p.experiment.min_pct_answered_for_bonus = 40
-    #    p.experiment.save()
-    #    self.assertTrue(p.qualifies_for_bonus())
-    #    self.assertEqual(p.experiment.bonus_value, p.bonus_payout())
-
     def testWonGameCount(self):
         p = self.p1
         t1 = self.early
@@ -650,10 +611,14 @@ class TaskDayTest(TestCase):
 
     def setUp(self):
         self.today = datetime.date(2011, 7, 1) # Not really today.
-        self.exp = models.Experiment.objects.create()
+        self.exp = models.Experiment.objects.create(
+            min_pct_answered_for_bonus=50,
+            response_window=120)
         self.p1 = models.Participant.objects.create(
             experiment=self.exp, start_date=self.today, status='baseline')
         self.early = datetime.datetime(2011, 7, 1, 8, 30)
+        self.quick_answer = datetime.datetime(2011, 7, 1, 8, 31)
+        self.slow_answer = datetime.datetime(2011, 7, 1, 8, 35)
         self.td_start = datetime.datetime(2011, 7, 1, 9, 30)
         self.td_end = datetime.datetime(2011, 7, 1, 19, 00)
         self.late = datetime.datetime(2011, 7, 1, 20, 00)
@@ -744,6 +709,46 @@ class TaskDayTest(TestCase):
         today_samples = self.td1.hilowgame_set.all()
         self.assertEqual(1, today_samples.count())
         self.assertEqual(hg1, today_samples[0])
+
+    def testMessageCounts(self):
+        es1 = self.p1.experiencesample_set.create(sent_at=self.early)
+        gp1 = self.p1.gamepermission_set.create(sent_at=self.early)
+        hg1 = self.p1.hilowgame_set.create(sent_at=self.early)
+        self.assertEqual(3, self.td1.message_count())
+        self.assertEqual(0, self.td1.message_count_for_bonus())
+        es1.answered_at = self.quick_answer
+        es1.save()
+        self.assertEqual(1, self.td1.message_count_for_bonus())
+        gp1.answered_at = self.quick_answer
+        gp1.save()
+        self.assertEqual(2, self.td1.message_count_for_bonus())
+        hg1.answered_at = self.slow_answer
+        hg1.save()
+        self.assertEqual(2, self.td1.message_count_for_bonus())
+        hg1.answered_at = self.quick_answer
+        hg1.save()
+        self.assertEqual(3, self.td1.message_count_for_bonus())
+
+    def testQualifiesForBonus(self):
+        es1 = self.p1.experiencesample_set.create(sent_at=self.early)
+        gp1 = self.p1.gamepermission_set.create(sent_at=self.early)
+        hg1 = self.p1.hilowgame_set.create(sent_at=self.early)
+        self.assertFalse(self.td1.qualifies_for_bonus())
+        es1.answered_at = self.quick_answer
+        es1.save()
+        self.assertFalse(self.td1.qualifies_for_bonus())
+        gp1.answered_at = self.quick_answer
+        gp1.save()
+        self.assertTrue(self.td1.qualifies_for_bonus())
+        hg1.answered_at = self.quick_answer
+        hg1.save()
+        self.assertTrue(self.td1.qualifies_for_bonus())
+        hg1.answered_at = self.slow_answer
+        hg1.save()
+        self.assertTrue(self.td1.qualifies_for_bonus())
+        gp1.answered_at = self.slow_answer
+        gp1.save()
+        self.assertFalse(self.td1.qualifies_for_bonus())
 
 
 class TropoRequestTest(TestCase):
