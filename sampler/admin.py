@@ -27,7 +27,9 @@ class ExperimentAdmin(admin.ModelAdmin):
 class TaskDayInlineAdmin(admin.TabularInline):
     model = models.TaskDay
 
-    fields = ('task_day', 'start_time', 'end_time', 'is_game_day')
+    readonly_fields = ('qualified_frac', )
+    fields = ('task_day', 'start_time', 'end_time', 'is_game_day',
+        'qualified_frac')
 
     extra = 0
 
@@ -35,7 +37,7 @@ class TaskDayInlineAdmin(admin.TabularInline):
 class ParticipantAdmin(admin.ModelAdmin):
     inlines = [TaskDayInlineAdmin]
 
-    readonly_fields = ['status', 'bonus_fraction', 'total_payout_str']
+    readonly_fields = ['status', 'total_payout_str']
 
     def save_model(self, request, obj, form, change):
         obj.save()
@@ -91,7 +93,8 @@ class GamePermissionAdmin(ParticipantExchangeAdmin):
 class TaskDayAdmin(admin.ModelAdmin):
 
     ordering = ('task_day', )
-    list_display = ('__str__', 'participant', 'task_day', 'is_game_day')
+    list_display = ('__str__', 'participant', 'task_day', 'is_game_day',
+        'qualified_frac')
     list_filter = ('participant', )
 
 admin.site.register(models.Experiment, ExperimentAdmin)
