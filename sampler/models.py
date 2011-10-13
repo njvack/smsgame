@@ -88,10 +88,8 @@ class TextingTropo(tropo.Tropo):
         return True
 
     def send_text_to(self, participant, dt, message):
-        self.call(participant.phone_number.for_tropo, channel="TEXT")
-        result = self.say_to(participant, dt, message)
-        self.hangup()
-        return result
+        count = self.send_texts_to(participant, dt, [message])
+        return count > 0
 
     def send_texts_to(self, participant, dt, messages):
         count = 0
