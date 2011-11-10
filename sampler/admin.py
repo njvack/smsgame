@@ -56,10 +56,10 @@ class IncomingTextMessageAdmin(admin.ModelAdmin):
 
 class OutgoingTextMessageAdmin(admin.ModelAdmin):
 
-    list_display = ('participant', 'sent_at', 'message_text')
+    list_display = ('participant', 'sent_at_precise', 'message_text')
     list_filter = ('participant', )
 
-    ordering = ('-sent_at', )
+    ordering = ('-id', )
 
 
 class ParticipantExchangeAdmin(admin.ModelAdmin):

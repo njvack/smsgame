@@ -1039,6 +1039,10 @@ class OutgoingTextMessage(StampedModel):
 
     sent_at = models.DateTimeField()
 
+    def sent_at_precise(self):
+        return self.sent_at.strftime("%Y-%m-%d %H:%M:%S")
+    sent_at_precise.short_description = "Sent at"
+
 
 class OutgoingTropoSession(object):
 
