@@ -153,6 +153,7 @@ class ParticipantTest(TestCase):
         p.tropo_answer("y", self.early, t, True)
         self.assertEqual("game_guess", p.status)
         self.assertEqual(1, p.hilowgame_set.count())
+        self.assertEqual(1, t.things_said) # Sends the 'get guess' message
 
     def testAnswerGamePermissionNoAllowsFurtherContacts(self):
         p = self.p1
