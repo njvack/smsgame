@@ -95,6 +95,7 @@ class TextingTropo(tropo.Tropo):
         count = 0
         self.call(participant.phone_number.for_tropo, channel="TEXT")
         for msg in messages:
+            logger.debug("Sending %s to %s" % (msg, participant))
             if self.say_to(participant, dt, msg):
                 count += 1
         self.hangup()
