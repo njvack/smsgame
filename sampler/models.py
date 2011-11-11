@@ -391,7 +391,7 @@ class Participant(StampedModel):
         if gp.permissed:
             self.set_status('game_guess')
             game = self.hilowgame_set.create(scheduled_at=cur_time)
-            tropo_obj.send_text_to(
+            tropo_obj.say_to(
                 self,
                 cur_time,
                 game.get_message_mark_sent(cur_time))
