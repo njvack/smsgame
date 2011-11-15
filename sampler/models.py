@@ -15,7 +15,10 @@ import logging
 logger = logging.getLogger("smsgame")
 
 SEC_IN_MIN = 60
-GAME_PADDING_SEC = 150 * SEC_IN_MIN
+
+SEC_NEEDED_TO_SCHED_GAME = 120*SEC_IN_MIN
+SEC_NEEDED_TO_RUN_GAME = 105*SEC_IN_MIN
+
 POST_SAMPLE_PERIOD_SEC = 90 * SEC_IN_MIN # 90 minutes
 
 
@@ -299,12 +302,12 @@ class Participant(StampedModel):
         Checks to see that we really have enough time to run a game,
         return to baseline if not.
         """
-        if not self.status == "game_permission":
+        if not self.status == 'game_permission':
             return
         task_day = self.taskday_set.get(
             task_day=self.next_contact_time.date())
         if ((task_day.latest_contact - self.next_contact_time).seconds <
-            GAME_PADDING_SEC):
+            SEC_NEEDED_TO_RUN_GAME):
             self.set_status('baseline')
             # And delete our GamePermission
             gps = self.gamepermission_set.newest_if_unanswered()
@@ -928,7 +931,8 @@ class TaskDay(StampedModel):
         """
         self.set_status_for_time(dt, skip_save)
         if self.is_game_day:
-            game_time = self.random_time_before_day_end(GAME_PADDING_SEC)
+            game_time = self.random_time_before_day_end(
+                SEC_NEEDED_TO_SCHED_GAME)
             self.participant.gamepermission_set.create(
                 scheduled_at=game_time)
         self.participant.wake_up(dt, skip_save)

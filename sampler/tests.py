@@ -1024,6 +1024,19 @@ class SecheduleAndSendTest(TestCase):
         p = pf(pk=self.p1.pk)
         self.assertEqual("game_permission", p.status)
 
+    def testGamePermissionReturnsToBaseline(self):
+        p = self.p1
+        p.status = "game_permission"
+        td = self.td1
+        sched_time = td.latest_contact-datetime.timedelta(
+            seconds=models.SEC_NEEDED_TO_RUN_GAME-1)
+        gp = p.gamepermission_set.create(
+            scheduled_at=sched_time)
+        p.next_contact_time = sched_time
+        p.save()
+        p._game_permission_transition(sched_time)
+        self.assertEqual('baseline', p.status)
+
     def testGameReturnsToBaseline(self):
         p = self.p1
         pf = models.Participant.objects.get
