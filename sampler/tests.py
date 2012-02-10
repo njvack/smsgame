@@ -580,11 +580,17 @@ class GamePermissionTest(TestCase):
 class HiLowGameTest(TestCase):
 
     def setUp(self):
+        self.today = datetime.date(2011, 7, 1) # Not really today.
+        self.exp = models.Experiment.objects.create(
+            min_pct_answered_for_bonus=50,
+            target_wins=1,
+            target_losses=1,
+            response_window=60)
+        self.p1 = models.Participant.objects.create(
+            experiment=self.exp, start_date=self.today,
+            phone_number='6085551212')
         self.now = datetime.datetime(2011, 7, 1, 9, 30)
-        self.hlg = models.HiLowGame()
-
-    def testGeneratesDefault(self):
-        self.assertIsNotNone(self.hlg.correct_guess)
+        self.hlg = models.HiLowGame(participant=self.p1)
 
     def testAnswerWithNumber(self):
         hlg = self.hlg
@@ -607,24 +613,25 @@ class HiLowGameTest(TestCase):
 
     def testGuessWasCorrect(self):
         hlg = self.hlg
-        hlg.correct_guess = 1
-        hlg.answer("low", self.now, True)
-        self.assertTrue(hlg.guess_was_correct)
-        hlg.answer("high", self.now, True)
-        self.assertFalse(hlg.guess_was_correct)
-        hlg.correct_guess = 9
-        hlg.answer("high", self.now, True)
-        self.assertTrue(hlg.guess_was_correct)
+        # We'll win a game, guaranteeing losses
+        won_game = self.p1.hilowgame_set.create(
+            sent_at=self.now, correct_guess=1, guessed_low=True)
         hlg.answer("low", self.now, True)
         self.assertFalse(hlg.guess_was_correct)
+        hlg.answer("high", self.now, True)
+        self.assertFalse(hlg.guess_was_correct)
+        won_game.delete()
+
+        # And now lose one, guaranteeing wins
+        lost_game = self.p1.hilowgame_set.create(
+            sent_at=self.now, correct_guess=9, guessed_low=True)
+        hlg.answer("high", self.now, True)
+        self.assertTrue(hlg.guess_was_correct)
+        hlg.answer("low", self.now, True)
+        self.assertTrue(hlg.guess_was_correct)
 
     def testWasAnsweredWithinWindow(self):
-        exp = models.Experiment.objects.create(response_window=60)
-        p1 = models.Participant.objects.create(
-            experiment=exp, start_date=self.now.date(),
-            phone_number='6085551212')
-
-        hlg = models.HiLowGame(participant=p1)
+        hlg = models.HiLowGame(participant=self.p1)
         early = self.now + datetime.timedelta(seconds=60)
         late = self.now + datetime.timedelta(seconds=61)
         hlg.sent_at = self.now
@@ -632,13 +639,6 @@ class HiLowGameTest(TestCase):
         self.assertTrue(hlg.was_answered_within_window())
         hlg.answered_at = late
         self.assertFalse(hlg.was_answered_within_window())
-
-    def testShouldWin(self):
-        #self.exp = models.Experiment.objects.create()
-        #self.p1 = models.Participant.objects.create(
-        #    experiment=self.exp, start_date=self.today,
-        #    phone_number='6085551212')
-        pass
 
 
 class IncomingTextTest(TestCase):

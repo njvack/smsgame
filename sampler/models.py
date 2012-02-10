@@ -802,17 +802,11 @@ class GamePermission(ParticipantExchange):
             self.save()
 
 
-def random_hi_low():
-    num = random.randint(1, 8)
-    if num >= 5:
-        num += 1
-    return num
-
-
 class HiLowGame(ParticipantExchange):
 
     correct_guess = models.IntegerField(
-        default=random_hi_low)
+        blank=True,
+        null=True)
 
     guessed_low = models.NullBooleanField(
         blank=True,
@@ -837,6 +831,15 @@ class HiLowGame(ParticipantExchange):
             self.guessed_low = (match == "l")
         except:
             raise ResponseError("We didn't understand your repsonse. Please enter low or high.")
+
+        should_win = self.participant.should_win()
+        make_low_number = (
+            (should_win and self.guessed_low) or
+            (not should_win and not self.guessed_low))
+        if make_low_number:
+            self.correct_guess = random.randint(1, 4)
+        else:
+            self.correct_guess = random.randint(6, 9)
 
         self.answered_at = answered_at
         if not skip_save:
