@@ -10,7 +10,9 @@ class ExperimentAdmin(admin.ModelAdmin):
                 'url_slug'),
                 ('day_count',
                 'game_count',
-                'max_messages_per_day'), )}),
+                'max_messages_per_day',
+                'target_wins',
+                'target_losses',), )}),
         ('Messaging', {'fields':
             ((
                 'min_time_between_samples',
