@@ -19,7 +19,9 @@ class ParticipantTest(TestCase):
         random.seed(0)
         self.today = datetime.date(2011, 7, 1) # Not really today.
         self.exp = models.Experiment.objects.create(
-            min_pct_answered_for_bonus=50)
+            min_pct_answered_for_bonus=50,
+            target_wins=2,
+            target_losses=2)
         self.p1 = models.Participant.objects.create(
             experiment=self.exp, start_date=self.today,
             phone_number='6085551212')
@@ -367,14 +369,86 @@ class ParticipantTest(TestCase):
         self.assertEqual(1, p.task_day_count_for_bonus())
         self.assertEqual(self.exp.bonus_value, p.bonus_payout())
 
-    def testWonGameCount(self):
+    def testWonAndLostGameCount(self):
         p = self.p1
         t1 = self.early
         p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=True)
         p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=False)
         p.hilowgame_set.create(sent_at=t1, correct_guess=9, guessed_low=True)
+        p.hilowgame_set.create(sent_at=t1, correct_guess=9, guessed_low=True)
         p.hilowgame_set.create(sent_at=t1, correct_guess=9, guessed_low=False)
+        p.hilowgame_set.create(sent_at=t1, correct_guess=9)
         self.assertEqual(2, p.won_game_count())
+        self.assertEqual(3, p.lost_game_count())
+
+    def testRemainingTargetWinsAndLosses(self):
+        p = self.p1
+        t1 = self.early
+        first_target_wins = p.remaining_target_wins()
+        first_target_losses = p.remaining_target_losses()
+        self.assertEqual(self.exp.target_wins, first_target_wins)
+        self.assertEqual(self.exp.target_losses, first_target_losses)
+        p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=True)
+        p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=False)
+        self.assertEqual(first_target_wins - 1, p.remaining_target_wins())
+        self.assertEqual(first_target_losses - 1, p.remaining_target_losses())
+
+    def testShouldWinRandomlyAtStart(self):
+        # It's random stuff. Hm.
+        iters = 20
+        p = self.p1
+        t1 = self.early
+        wins = 0
+        for i in range(iters):
+            if p.should_win():
+                wins += 1
+        self.assertLess(0, wins)
+        self.assertGreater(iters, wins)
+
+    def testShouldLoseAfterWins(self):
+        iters = 20
+        p = self.p1
+        t1 = self.early
+        for i in range(self.exp.target_wins):
+            p.hilowgame_set.create(sent_at=t1, correct_guess=1,
+                guessed_low=True)
+        wins = 0
+        for i in range(iters):
+            if p.should_win():
+                wins += 1
+        self.assertEqual(0, wins)
+
+    def testShouldWinAfterLosses(self):
+        iters = 20
+        p = self.p1
+        t1 = self.early
+        for i in range(self.exp.target_losses):
+            p.hilowgame_set.create(sent_at=t1, correct_guess=9,
+                guessed_low=True)
+        wins = 0
+        for i in range(iters):
+            if p.should_win():
+                wins += 1
+        self.assertEqual(iters, wins)
+
+    def testShouldWinRandomlyWhenFull(self):
+        iters = 20
+        p = self.p1
+        t1 = self.early
+        for i in range(self.exp.target_wins):
+            p.hilowgame_set.create(sent_at=t1, correct_guess=1,
+                guessed_low=True)
+
+        for i in range(self.exp.target_losses):
+            p.hilowgame_set.create(sent_at=t1, correct_guess=9,
+                guessed_low=True)
+
+        wins = 0
+        for i in range(iters):
+            if p.should_win():
+                wins += 1
+        self.assertLess(0, wins)
+        self.assertGreater(iters, wins)
 
     def testTotalWonInGames(self):
         p = self.p1
@@ -558,6 +632,13 @@ class HiLowGameTest(TestCase):
         self.assertTrue(hlg.was_answered_within_window())
         hlg.answered_at = late
         self.assertFalse(hlg.was_answered_within_window())
+
+    def testShouldWin(self):
+        #self.exp = models.Experiment.objects.create()
+        #self.p1 = models.Participant.objects.create(
+        #    experiment=self.exp, start_date=self.today,
+        #    phone_number='6085551212')
+        pass
 
 
 class IncomingTextTest(TestCase):

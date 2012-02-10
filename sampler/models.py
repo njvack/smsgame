@@ -512,10 +512,35 @@ class Participant(StampedModel):
     def task_day_count_for_bonus(self):
         return len(self.task_days_for_bonus())
 
+    def answered_games(self):
+        return self.hilowgame_set.filter(guessed_low__isnull=False)
+
     def won_game_count(self):
-        games = self.hilowgame_set.all()
+        games = self.answered_games()
         won_games = [g for g in games if g.guess_was_correct]
         return len(won_games)
+
+    def lost_game_count(self):
+        games = self.answered_games()
+        lost_games = [g for g in games if not g.guess_was_correct]
+        return len(lost_games)
+
+    def remaining_target_wins(self):
+        return self.experiment.target_wins - self.won_game_count()
+
+    def remaining_target_losses(self):
+        return self.experiment.target_losses - self.lost_game_count()
+
+    def should_win(self):
+        result = random.random() > 0.5
+        result_array = ([True] * self.remaining_target_wins() +
+            [False] * self.remaining_target_losses())
+        try:
+            result = random.choice(result_array)
+        except IndexError:
+            # This is OK, we're just out of samples
+            pass
+        return result
 
     def game_payout(self):
         return self.experiment.game_value*self.won_game_count()
@@ -591,6 +616,12 @@ class Experiment(StampedModel):
         default=20.00,
         max_digits=5,
         decimal_places=2)
+
+    target_wins = models.IntegerField(
+        default=5)
+
+    target_losses = models.IntegerField(
+        default=5)
 
     participation_value = models.DecimalField(
         help_text="(Dollars)",
