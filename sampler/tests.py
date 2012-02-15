@@ -148,14 +148,21 @@ class ParticipantTest(TestCase):
         t = mocks.Tropo()
         p.status = 'game_permission'
         p.gamepermission_set.create(scheduled_at=self.early)
-        p.tropo_answer("n", self.early, t, True)
-        self.assertEqual("game_permission", p.status)
-        self.assertEqual(0, p.hilowgame_set.count())
-        p.gamepermission_set.create(scheduled_at=self.early)
         p.tropo_answer("y", self.early, t, True)
         self.assertEqual("game_guess", p.status)
         self.assertEqual(1, p.hilowgame_set.count())
         self.assertEqual(1, t.things_said) # Sends the 'get guess' message
+
+    def testRefusingPermissionReturnsToBaseline(self):
+        p = self.p1
+        t = mocks.Tropo()
+        p.status = 'game_permission'
+        gp = p.gamepermission_set.create(scheduled_at=self.early)
+        p.tropo_answer("n", self.early, t, True)
+        gp2 = p.gamepermission_set.newest_if_unanswered()
+        self.assertEqual("baseline", p.status)
+        self.assertEqual(0, p.hilowgame_set.count())
+        self.assertNotEqual(gp.pk, gp2.pk)
 
     def testAnswerGamePermissionNoAllowsFurtherContacts(self):
         p = self.p1

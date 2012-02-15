@@ -301,6 +301,35 @@ class Participant(StampedModel):
         else:
             logger.debug("%s: staying baseline" % self)
 
+    def _deny_game_permission(self, dt):
+        """
+        Handle the game permission -> baseline transition
+        """
+        logger.debug("%s: denying game permission" % (self, ))
+        if not self.status == 'game_permission':
+            return
+        task_day = self.taskday_set.get(
+            task_day=dt.date())
+        gp = self.gamepermission_set.newest()
+        self.set_status('baseline')
+        # And delete our GamePermission
+        gp.deleted_at = datetime.datetime.now()
+        gp.save()
+        earliest_time = dt + self.experiment.max_time_between_samples_delta
+        latest_time = task_day.latest_contact - GAME_SCHEDULE_DELTA
+        if (latest_time > earliest_time):
+            duration = (latest_time - earliest_time).seconds
+            min_sec = self.experiment.max_time_between_samples_delta.seconds
+            max_sec = min_sec + duration
+            sched_sec = random.randint(min_sec, max_sec)
+            sched_time = dt + datetime.timedelta(seconds=sched_sec)
+            gp = self.gamepermission_set.create(
+                scheduled_at=sched_time)
+            logger.debug("Scheduled new game permission at %s" % (
+                sched_time))
+        else:
+            logger.debug("%s: not enough time to schedule a new game" % (self))
+
     def _game_permission_transition(self, dt):
         """
         Checks to see that we really have enough time to run a game,
@@ -318,32 +347,15 @@ class Participant(StampedModel):
         if gp:
             permission_time_expired = (dt >=
                 (gp.scheduled_at + GAME_PERMISSION_DELTA))
-        if out_of_time or permission_time_expired:
+        if out_of_time:
             self.set_status('baseline')
             # And delete our GamePermission
             gp.deleted_at = datetime.datetime.now()
             gp.save()
+            return
 
         if permission_time_expired:
-            # Create a new GamePermission
-            earliest_time = (
-                dt + self.experiment.max_time_between_samples_delta)
-            latest_time = (
-                task_day.latest_contact - GAME_PERMISSION_DELTA)
-            if (latest_time > earliest_time):
-                minsec = self.experiment.max_time_between_samples_delta.seconds
-                dur = (latest_time - earliest_time).seconds
-                if (dur <= 0):
-                    return
-                maxsec = minsec + dur
-                sched_sec = random.randint(minsec, maxsec)
-                sched_time = dt + datetime.timedelta(seconds=sched_sec)
-                gp = self.gamepermission_set.create(
-                    scheduled_at=sched_time)
-                logger.debug("Scheduled new game permission at %s" % (
-                    sched_time))
-            else:
-                logger.debug("%s: Not enough time to reschedule.")
+            self._deny_game_permission(dt)
         else:
             logger.debug("%s: staying game_permission" % self)
 
@@ -429,6 +441,8 @@ class Participant(StampedModel):
                 self,
                 cur_time,
                 game.get_message_mark_sent(cur_time))
+        else:
+            self._deny_game_permission(cur_time)
         return gp
 
     def _game_guess_incoming(self, message_text, cur_time, tropo_obj):
