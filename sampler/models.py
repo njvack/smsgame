@@ -239,6 +239,9 @@ class Participant(StampedModel):
 
     def _game_permission_time(self, dt):
         nct = dt
+        game_permission = self.gamepermission_set.newest()
+        if game_permission.sent_at:
+            nct = nct+GAME_PERMISSION_DELTA
         return nct
 
     def _game_guess_time(self, dt):
@@ -312,6 +315,7 @@ class Participant(StampedModel):
             task_day=dt.date())
         gp = self.gamepermission_set.newest()
         self.set_status('baseline')
+        self.next_contact_time = None
         # And delete our GamePermission
         gp.deleted_at = datetime.datetime.now()
         gp.save()
