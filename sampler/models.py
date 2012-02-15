@@ -16,10 +16,17 @@ logger = logging.getLogger("smsgame")
 
 SEC_IN_MIN = 60
 
-SEC_NEEDED_TO_SCHED_GAME = 120*SEC_IN_MIN
-SEC_NEEDED_TO_RUN_GAME = 105*SEC_IN_MIN
+MIN_NEEDED_TO_SCHEDULE_GAME=120
+MIN_WAIT_FOR_GAME_PERMISSION=15
 
 POST_SAMPLE_PERIOD_SEC = 90 * SEC_IN_MIN # 90 minutes
+MIN_IN_POST_SAMPLE_PERIOD = 90
+GAME_PERMISSION_DELTA = datetime.timedelta(
+    minutes=MIN_WAIT_FOR_GAME_PERMISSION)
+GAME_RUN_DELTA = datetime.timedelta(
+    minutes=MIN_NEEDED_TO_SCHEDULE_GAME-MIN_WAIT_FOR_GAME_PERMISSION)
+GAME_SCHEDULE_DELTA = datetime.timedelta(
+    minutes=MIN_NEEDED_TO_SCHEDULE_GAME)
 
 
 class PhoneNumber(object):
@@ -232,9 +239,6 @@ class Participant(StampedModel):
 
     def _game_permission_time(self, dt):
         nct = dt
-        game_permission = self.gamepermission_set.newest()
-        if game_permission.sent_at:
-            nct = nct+datetime.timedelta(minutes=15)
         return nct
 
     def _game_guess_time(self, dt):
@@ -306,13 +310,40 @@ class Participant(StampedModel):
             return
         task_day = self.taskday_set.get(
             task_day=self.next_contact_time.date())
-        if ((task_day.latest_contact - self.next_contact_time).seconds <
-            SEC_NEEDED_TO_RUN_GAME):
+        out_of_time = (self.next_contact_time >
+            (task_day.latest_contact - GAME_SCHEDULE_DELTA))
+
+        gp = self.gamepermission_set.newest_if_unanswered()
+        permission_time_expired = False
+        if gp:
+            permission_time_expired = (dt >=
+                (gp.scheduled_at + GAME_PERMISSION_DELTA))
+        if out_of_time or permission_time_expired:
             self.set_status('baseline')
             # And delete our GamePermission
-            gps = self.gamepermission_set.newest_if_unanswered()
-            gps.deleted_at = datetime.datetime.now()
-            gps.save()
+            gp.deleted_at = datetime.datetime.now()
+            gp.save()
+
+        if permission_time_expired:
+            # Create a new GamePermission
+            earliest_time = (
+                dt + self.experiment.max_time_between_samples_delta)
+            latest_time = (
+                task_day.latest_contact - GAME_PERMISSION_DELTA)
+            if (latest_time > earliest_time):
+                minsec = self.experiment.max_time_between_samples_delta.seconds
+                dur = (latest_time - earliest_time).seconds
+                if (dur <= 0):
+                    return
+                maxsec = minsec + dur
+                sched_sec = random.randint(minsec, maxsec)
+                sched_time = dt + datetime.timedelta(seconds=sched_sec)
+                gp = self.gamepermission_set.create(
+                    scheduled_at=sched_time)
+                logger.debug("Scheduled new game permission at %s" % (
+                    sched_time))
+            else:
+                logger.debug("%s: Not enough time to reschedule.")
         else:
             logger.debug("%s: staying game_permission" % self)
 
@@ -644,6 +675,14 @@ class Experiment(StampedModel):
         return "Experiment %s: %s days, %s games" % (
             self.pk, self.day_count, self.game_count)
 
+    @property
+    def min_time_between_samples_delta(self):
+        return datetime.timedelta(minutes=self.min_time_between_samples)
+
+    @property
+    def max_time_between_samples_delta(self):
+        return datetime.timedelta(minutes=self.max_time_between_samples)
+
 
 class ResponseError(ValueError):
     pass
@@ -966,7 +1005,7 @@ class TaskDay(StampedModel):
         self.set_status_for_time(dt, skip_save)
         if self.is_game_day:
             game_time = self.random_time_before_day_end(
-                SEC_NEEDED_TO_SCHED_GAME)
+                GAME_SCHEDULE_DELTA)
             self.participant.gamepermission_set.create(
                 scheduled_at=game_time)
         self.participant.wake_up(dt, skip_save)
@@ -976,9 +1015,9 @@ class TaskDay(StampedModel):
         complete = self.is_last_task_day()
         self.participant.go_to_sleep(dt, complete, skip_save)
 
-    def random_time_before_day_end(self, before_end_sec):
+    def random_time_before_day_end(self, delta):
         day_len = (self.latest_contact - self.earliest_contact)
-        available_time_sec = day_len.seconds - before_end_sec
+        available_time_sec = day_len.seconds - delta.seconds
         offset_sec = random.randint(0, available_time_sec)
         dt = self.earliest_contact + datetime.timedelta(seconds=offset_sec)
         return dt

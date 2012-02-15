@@ -306,6 +306,17 @@ class ParticipantTest(TestCase):
         self.assertEqual(1, t.things_said)
         self.assertIsNotNone(gp.sent_at)
 
+    def testGamePermissionTransition(self):
+        p = self.p1
+        gp = p.gamepermission_set.create(scheduled_at=self.early)
+        transition_time = self.early + datetime.timedelta(minutes=16)
+        p.status = "game_permission"
+        p.next_contact_time = transition_time
+        p._game_permission_transition(transition_time)
+        self.assertEqual("baseline", p.status)
+        gp2 = p.gamepermission_set.newest_if_unanswered()
+        self.assertLess(self.early, gp2.scheduled_at)
+
     def testGameGuessSends(self):
         p = self.p1
         t = mocks.Tropo()
@@ -1110,7 +1121,7 @@ class SecheduleAndSendTest(TestCase):
         p.status = "game_permission"
         td = self.td1
         sched_time = td.latest_contact-datetime.timedelta(
-            seconds=models.SEC_NEEDED_TO_RUN_GAME-1)
+            seconds=models.GAME_RUN_DELTA.seconds-1)
         gp = p.gamepermission_set.create(
             scheduled_at=sched_time)
         p.next_contact_time = sched_time
