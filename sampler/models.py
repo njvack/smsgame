@@ -152,7 +152,7 @@ class Participant(StampedModel):
             'time_fx': '_baseline_contact_time',
             'status_handler': '_baseline_transition',
             'send_handler': '_baseline_send',
-            'incoming_handler': '_experince_sample_incoming', },
+            'incoming_handler': '_experience_sample_incoming', },
         "game_permission": {
             'time_fx': '_game_permission_time',
             'status_handler': '_game_permission_transition',
@@ -165,14 +165,14 @@ class Participant(StampedModel):
         "game_inter_sample": {
             'time_fx': '_game_intersample_time',
             'send_handler': '_game_inter_sample_send',
-            'incoming_handler': '_experince_sample_incoming', },
+            'incoming_handler': '_experience_sample_incoming', },
         "game_result": {
             'time_fx': '_game_result_time',
             'send_handler': '_game_result_send'},
         "game_post_sample": {
             'time_fx': '_game_post_sample_time',
             'send_handler': '_game_post_sample_send',
-            'incoming_handler': '_experince_sample_incoming', },
+            'incoming_handler': '_experience_sample_incoming', },
         "complete": {}}
 
     status = models.CharField(
@@ -430,7 +430,7 @@ class Participant(StampedModel):
             logger.debug("Post-sample period over, returning to baseline")
             self.set_status('baseline')
 
-    def _experince_sample_incoming(self, message_text, cur_time, tropo_obj):
+    def _experience_sample_incoming(self, message_text, cur_time, tropo_obj):
         es = self.experiencesample_set.newest_if_unanswered()
         es.answer(message_text, cur_time)
         return es
@@ -737,7 +737,9 @@ class ParticipantExchange(StampedModel):
         blank=True,
         editable=False)
 
-    scheduled_at = models.DateTimeField()
+    scheduled_at = models.DateTimeField(
+        null=True,
+        blank=True)
 
     sent_at = models.DateTimeField(
         null=True,
