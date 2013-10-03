@@ -71,11 +71,11 @@ class ParticipantExchangeAdmin(admin.ModelAdmin):
     list_filter = ('participant', )
 
 
-class HiLowGameAdmin(ParticipantExchangeAdmin):
+class GuessingGameAdmin(ParticipantExchangeAdmin):
 
     list_display = (
         'participant', 'scheduled_at', 'sent_at', 'answered_at',
-        'correct_guess', 'guessed_low', 'guess_was_correct')
+        'red_correct', 'guessed_red', 'guess_was_correct')
 
 
 class ExperienceSampleAdmin(ParticipantExchangeAdmin):
@@ -105,5 +105,5 @@ admin.site.register(models.TaskDay, TaskDayAdmin)
 admin.site.register(models.IncomingTextMessage, IncomingTextMessageAdmin)
 admin.site.register(models.OutgoingTextMessage, OutgoingTextMessageAdmin)
 admin.site.register(models.ExperienceSample, ExperienceSampleAdmin)
-admin.site.register(models.HiLowGame, HiLowGameAdmin)
+admin.site.register(models.GuessingGame, GuessingGameAdmin)
 admin.site.register(models.GamePermission, GamePermissionAdmin)

@@ -18,6 +18,12 @@ def timefmt(dt):
         return dt
 
 
+def add_participant(request):
+    logger.debug("I AM A BRONZED GOD")
+    logger.debug(json.loads(request.POST['target_data']))
+    return HttpResponse("Shit.")
+
+
 def tropo(request):
     logger.debug("Tropo request: "+request.raw_post_data)
     treq = TropoRequest(request.raw_post_data)
@@ -95,7 +101,7 @@ def experiencesamples_csv(request, slug):
     return response
 
 
-def hilowgames_csv(request, slug):
+def guessinggames_csv(request, slug):
     experiment = get_object_or_404(models.Experiment, url_slug=slug)
 
     response = HttpResponse(content_type='text/csv')
@@ -105,7 +111,7 @@ def hilowgames_csv(request, slug):
         'was_correct']
     csv_out.writerow(columns)
     for p in experiment.participant_set.all().order_by('created_at'):
-        for g in p.hilowgame_set.all().order_by('pk'):
+        for g in p.guessinggame_set.all().order_by('pk'):
             try:
                 row = [experiment.url_slug, p.pk, g.pk,
                     g.participant_status_when_sent, timefmt(g.sent_at),
