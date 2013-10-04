@@ -18,12 +18,6 @@ def timefmt(dt):
         return dt
 
 
-def add_participant(request):
-    logger.debug("I AM A BRONZED GOD")
-    logger.debug(json.loads(request.POST['target_data']))
-    return HttpResponse("Shit.")
-
-
 def tropo(request):
     logger.debug("Tropo request: "+request.raw_post_data)
     treq = TropoRequest(request.raw_post_data)
@@ -76,6 +70,19 @@ def outgoing_message(request):
     ppt.tropo_send_message(now, t)
     response.write(t.RenderJson())
     return response
+
+
+def add_target(request, slug):
+    experiment = get_object_or_404(models.Experiment, url_slug=slug)
+    logger.debug("Adding target to %s" % experiment.url_slug)
+    target, created = experiment.target_set.get_or_create(
+        external_id=request.REQUEST['external_id'],
+        defaults={'message': request.REQUEST['message']})
+    # logger.debug(json.loads(request.POST['target_data']))
+    if created:
+        return HttpResponse("Created", status=201)
+    else:
+        return HttpResponse("Already exists", status=409)
 
 
 def experiencesamples_csv(request, slug):
