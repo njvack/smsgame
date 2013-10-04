@@ -13,7 +13,7 @@ from . import views
 from sampler.management.commands import schedule_and_send_messages
 
 
-class ViewsTest(TestCase):
+class TargetViewTest(TestCase):
 
     def setUp(self):
         self.exp = models.Experiment.objects.create(
@@ -24,11 +24,11 @@ class ViewsTest(TestCase):
 
     def testCreatingTargetWorks(self):
         c = Client()
-        response = c.get("/experiments/%s/add_target" % self.exp.url_slug,
+        response = c.post("/experiments/%s/add_target" % self.exp.url_slug,
             {'external_id': 'foo', 'message': 'I am a goat!'})
         self.assertEqual(201, response.status_code)
         self.assertIsNotNone(self.exp.target_set.get(external_id='foo'))
-        response = c.get("/experiments/%s/add_target" % self.exp.url_slug,
+        response = c.post("/experiments/%s/add_target" % self.exp.url_slug,
             {'external_id': 'foo', 'message': 'I am a goat!'})
         self.assertEqual(409, response.status_code)
 
