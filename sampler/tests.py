@@ -96,7 +96,7 @@ class ParticipantTest(TestCase):
         self.assertEqual(1, len(p.newest_contact_objects()))
         p.gamepermission_set.create(scheduled_at=t)
         self.assertEqual(2, len(p.newest_contact_objects()))
-        p.hilowgame_set.create(scheduled_at=t)
+        p.guessinggame_set.create(scheduled_at=t)
         self.assertEqual(3, len(p.newest_contact_objects()))
 
     def testBaselineTransition(self):
@@ -150,7 +150,7 @@ class ParticipantTest(TestCase):
         p.gamepermission_set.create(scheduled_at=self.early)
         p.tropo_answer("y", self.early, t, True)
         self.assertEqual("game_guess", p.status)
-        self.assertEqual(1, p.hilowgame_set.count())
+        self.assertEqual(1, p.guessinggame_set.count())
         self.assertEqual(1, t.things_said) # Sends the 'get guess' message
 
     def testRefusingPermissionReturnsToBaseline(self):
@@ -161,7 +161,7 @@ class ParticipantTest(TestCase):
         p.tropo_answer("n", self.early, t, True)
         gp2 = p.gamepermission_set.newest_if_unanswered()
         self.assertEqual("baseline", p.status)
-        self.assertEqual(0, p.hilowgame_set.count())
+        self.assertEqual(0, p.guessinggame_set.count())
         self.assertNotEqual(gp.pk, gp2.pk)
 
     def testAnswerGamePermissionNoAllowsFurtherContacts(self):
@@ -180,18 +180,18 @@ class ParticipantTest(TestCase):
         p = self.p1
         t1 = self.early
         p.status = 'game_guess'
-        hlg = p.hilowgame_set.create()
+        gg = p.guessinggame_set.create()
         self.assertEqual(t1, p._game_guess_time(t1))
-        hlg.sent_at = t1
-        hlg.save()
+        gg.sent_at = t1
+        gg.save()
         self.assertLess(t1, p._game_guess_time(t1))
 
     def testAnswerChangesToGameIntersample(self):
         p = self.p1
         t = mocks.Tropo()
         p.status = 'game_guess'
-        p.hilowgame_set.create(scheduled_at=self.early)
-        p.tropo_answer("low", self.early, t, True)
+        p.guessinggame_set.create(scheduled_at=self.early)
+        p.tropo_answer("red", self.early, t, True)
         self.assertEqual('game_inter_sample', p.status)
 
     def testAnswerStopMessageSetsStopped(self):
@@ -222,7 +222,7 @@ class ParticipantTest(TestCase):
         p = self.p1
         t = mocks.Tropo()
         p.status = 'game_guess'
-        p.hilowgame_set.create(scheduled_at=self.early)
+        p.guessinggame_set.create(scheduled_at=self.early)
         p.tropo_answer("", self.early, t, True)
         self.assertEqual('game_guess', p.status)
 
@@ -250,10 +250,10 @@ class ParticipantTest(TestCase):
         p.status = "game_result"
         t = mocks.Tropo()
         p.next_contact_time=self.early
-        p.hilowgame_set.create(scheduled_at=self.early)
+        p.guessinggame_set.create(scheduled_at=self.early)
         p.tropo_send_message(self.early, t, True)
         self.assertEqual('game_post_sample', p.status)
-        self.assertIsNotNone(p.hilowgame_set.newest().result_reported_at)
+        self.assertIsNotNone(p.guessinggame_set.newest().result_reported_at)
         self.assertEqual(t.called, p.phone_number.for_tropo)
         self.assertEqual(2, t.things_said) # This will also send an ES
         self.assertEqual(1, p.experiencesample_set.count())
@@ -262,7 +262,7 @@ class ParticipantTest(TestCase):
         p = self.p1
         p.status = "game_post_sample"
         t = mocks.Tropo()
-        hlg = p.hilowgame_set.create(
+        gg = p.guessinggame_set.create(
             scheduled_at=self.early,
             answered_at=self.early,
             result_reported_at=self.early)
@@ -327,10 +327,10 @@ class ParticipantTest(TestCase):
     def testGameGuessSends(self):
         p = self.p1
         t = mocks.Tropo()
-        g = p.hilowgame_set.create(scheduled_at=self.early)
+        g = p.guessinggame_set.create(scheduled_at=self.early)
         p.status = "game_guess"
         p.tropo_send_message(self.early, t, True)
-        g = p.hilowgame_set.get(pk=g.pk)
+        g = p.guessinggame_set.get(pk=g.pk)
         self.assertEqual(1, t.things_said)
         self.assertIsNotNone(g.sent_at)
 
@@ -390,12 +390,12 @@ class ParticipantTest(TestCase):
     def testWonAndLostGameCount(self):
         p = self.p1
         t1 = self.early
-        p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=True)
-        p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=False)
-        p.hilowgame_set.create(sent_at=t1, correct_guess=9, guessed_low=True)
-        p.hilowgame_set.create(sent_at=t1, correct_guess=9, guessed_low=True)
-        p.hilowgame_set.create(sent_at=t1, correct_guess=9, guessed_low=False)
-        p.hilowgame_set.create(sent_at=t1, correct_guess=9)
+        p.guessinggame_set.create(sent_at=t1, red_correct=True, guessed_red=True)
+        p.guessinggame_set.create(sent_at=t1, red_correct=True, guessed_red=False)
+        p.guessinggame_set.create(sent_at=t1, red_correct=False, guessed_red=True)
+        p.guessinggame_set.create(sent_at=t1, red_correct=False, guessed_red=True)
+        p.guessinggame_set.create(sent_at=t1, red_correct=False, guessed_red=False)
+        p.guessinggame_set.create(sent_at=t1, red_correct=False)
         self.assertEqual(2, p.won_game_count())
         self.assertEqual(3, p.lost_game_count())
 
@@ -406,8 +406,8 @@ class ParticipantTest(TestCase):
         first_target_losses = p.remaining_target_losses()
         self.assertEqual(self.exp.target_wins, first_target_wins)
         self.assertEqual(self.exp.target_losses, first_target_losses)
-        p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=True)
-        p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=False)
+        p.guessinggame_set.create(sent_at=t1, red_correct=True, guessed_red=True)
+        p.guessinggame_set.create(sent_at=t1, red_correct=True, guessed_red=False)
         self.assertEqual(first_target_wins - 1, p.remaining_target_wins())
         self.assertEqual(first_target_losses - 1, p.remaining_target_losses())
 
@@ -428,8 +428,8 @@ class ParticipantTest(TestCase):
         p = self.p1
         t1 = self.early
         for i in range(self.exp.target_wins):
-            p.hilowgame_set.create(sent_at=t1, correct_guess=1,
-                guessed_low=True)
+            p.guessinggame_set.create(sent_at=t1, red_correct=True,
+                guessed_red=True)
         wins = 0
         for i in range(iters):
             if p.should_win():
@@ -441,48 +441,29 @@ class ParticipantTest(TestCase):
         p = self.p1
         t1 = self.early
         for i in range(self.exp.target_losses):
-            p.hilowgame_set.create(sent_at=t1, correct_guess=9,
-                guessed_low=True)
+            p.guessinggame_set.create(sent_at=t1, red_correct=False,
+                guessed_red=True)
         wins = 0
         for i in range(iters):
             if p.should_win():
                 wins += 1
         self.assertEqual(iters, wins)
 
-    def testShouldWinRandomlyWhenFull(self):
-        iters = 20
-        p = self.p1
-        t1 = self.early
-        for i in range(self.exp.target_wins):
-            p.hilowgame_set.create(sent_at=t1, correct_guess=1,
-                guessed_low=True)
-
-        for i in range(self.exp.target_losses):
-            p.hilowgame_set.create(sent_at=t1, correct_guess=9,
-                guessed_low=True)
-
-        wins = 0
-        for i in range(iters):
-            if p.should_win():
-                wins += 1
-        self.assertLess(0, wins)
-        self.assertGreater(iters, wins)
-
     def testTotalWonInGames(self):
         p = self.p1
         t1 = self.early
-        p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=True)
-        p.hilowgame_set.create(sent_at=t1, correct_guess=1, guessed_low=False)
+        p.guessinggame_set.create(sent_at=t1, red_correct=True, guessed_red=True)
+        p.guessinggame_set.create(sent_at=t1, red_correct=True, guessed_red=False)
         self.assertEqual(self.exp.game_value, p.game_payout())
 
     def testTotalPayout(self):
         p = self.p1
         t1 = self.early
 
-        p.hilowgame_set.create(
-            sent_at=t1, answered_at=t1, correct_guess=1, guessed_low=True)
-        p.hilowgame_set.create(
-            sent_at=t1, answered_at=t1, correct_guess=1, guessed_low=False)
+        p.guessinggame_set.create(
+            sent_at=t1, answered_at=t1, red_correct=True, guessed_red=True)
+        p.guessinggame_set.create(
+            sent_at=t1, answered_at=t1, red_correct=True, guessed_red=False)
         total_amount = (
             p.experiment.participation_value +
             p.experiment.game_value +
@@ -595,7 +576,7 @@ class GamePermissionTest(TestCase):
         self.assertFalse(gp.was_answered_within_window())
 
 
-class HiLowGameTest(TestCase):
+class GuessingGameTest(TestCase):
 
     def setUp(self):
         self.today = datetime.date(2011, 7, 1) # Not really today.
@@ -608,55 +589,56 @@ class HiLowGameTest(TestCase):
             experiment=self.exp, start_date=self.today,
             phone_number='6085551212')
         self.now = datetime.datetime(2011, 7, 1, 9, 30)
-        self.hlg = models.HiLowGame(participant=self.p1)
+        self.gg = models.GuessingGame(participant=self.p1)
 
     def testAnswerWithNumber(self):
-        hlg = self.hlg
-        self.assertIsNone(hlg.guessed_low)
-        hlg.answer('high', self.now, True)
-        self.assertFalse(hlg.guessed_low)
-        hlg.answer('low', self.now, True)
-        self.assertTrue(hlg.guessed_low)
-        hlg.answer('H', self.now, True)
-        self.assertFalse(hlg.guessed_low)
-        hlg.answer('L', self.now, True)
-        self.assertTrue(hlg.guessed_low)
-        self.assertIsNotNone(hlg.answered_at)
+        gg = self.gg
+        self.assertIsNone(gg.guessed_red)
+        gg.answer('black', self.now, True)
+        self.assertFalse(gg.guessed_red)
+        gg.answer('red', self.now, True)
+        self.assertTrue(gg.guessed_red)
+        gg.answer('B', self.now, True)
+        self.assertFalse(gg.guessed_red)
+        gg.answer('R', self.now, True)
+        self.assertTrue(gg.guessed_red)
+        self.assertIsNotNone(gg.answered_at)
 
     def testBadAnswer(self):
         err = models.ResponseError
-        self.assertRaises(err, self.hlg.answer, "", self.now, True)
-        self.assertRaises(err, self.hlg.answer, "foo", self.now, True)
-        self.assertIsNone(self.hlg.answered_at)
+        self.assertRaises(err, self.gg.answer, "", self.now, True)
+        self.assertRaises(err, self.gg.answer, "foo", self.now, True)
+        self.assertIsNone(self.gg.answered_at)
 
     def testGuessWasCorrect(self):
-        hlg = self.hlg
+        gg = self.gg
         # We'll win a game, guaranteeing losses
-        won_game = self.p1.hilowgame_set.create(
-            sent_at=self.now, correct_guess=1, guessed_low=True)
-        hlg.answer("low", self.now, True)
-        self.assertFalse(hlg.guess_was_correct)
-        hlg.answer("high", self.now, True)
-        self.assertFalse(hlg.guess_was_correct)
+        won_game = self.p1.guessinggame_set.create(
+            sent_at=self.now, red_correct=True, guessed_red=True)
+        gg.answer("red", self.now, True)
+        self.assertFalse(gg.guess_was_correct)
+        gg.answer("black", self.now, True)
+        self.assertFalse(gg.guess_was_correct)
         won_game.delete()
 
         # And now lose one, guaranteeing wins
-        lost_game = self.p1.hilowgame_set.create(
-            sent_at=self.now, correct_guess=9, guessed_low=True)
-        hlg.answer("high", self.now, True)
-        self.assertTrue(hlg.guess_was_correct)
-        hlg.answer("low", self.now, True)
-        self.assertTrue(hlg.guess_was_correct)
+        lost_game = self.p1.guessinggame_set.create(
+            sent_at=self.now, red_correct=False, guessed_red=True)
+        gg.answer("black", self.now, True)
+        self.assertTrue(gg.participant.should_win())
+        self.assertTrue(gg.guess_was_correct)
+        gg.answer("red", self.now, True)
+        self.assertTrue(gg.guess_was_correct)
 
     def testWasAnsweredWithinWindow(self):
-        hlg = models.HiLowGame(participant=self.p1)
+        gg = models.GuessingGame(participant=self.p1)
         early = self.now + datetime.timedelta(seconds=60)
         late = self.now + datetime.timedelta(seconds=61)
-        hlg.sent_at = self.now
-        hlg.answered_at = early
-        self.assertTrue(hlg.was_answered_within_window())
-        hlg.answered_at = late
-        self.assertFalse(hlg.was_answered_within_window())
+        gg.sent_at = self.now
+        gg.answered_at = early
+        self.assertTrue(gg.was_answered_within_window())
+        gg.answered_at = late
+        self.assertFalse(gg.was_answered_within_window())
 
 
 class IncomingTextTest(TestCase):
@@ -829,17 +811,17 @@ class TaskDayTest(TestCase):
         self.assertEqual(1, today_samples.count())
         self.assertEqual(gp1, today_samples[0])
 
-    def testFindsHiLowGames(self):
-        hg1 = self.p1.hilowgame_set.create(sent_at=self.early)
-        hg2 = self.p1.hilowgame_set.create(sent_at=self.early_tomorrow)
-        today_samples = self.td1.hilowgame_set.all()
+    def testFindsGuessingGames(self):
+        hg1 = self.p1.guessinggame_set.create(sent_at=self.early)
+        hg2 = self.p1.guessinggame_set.create(sent_at=self.early_tomorrow)
+        today_samples = self.td1.guessinggame_set.all()
         self.assertEqual(1, today_samples.count())
         self.assertEqual(hg1, today_samples[0])
 
     def testMessageCounts(self):
         es1 = self.p1.experiencesample_set.create(sent_at=self.early)
         gp1 = self.p1.gamepermission_set.create(sent_at=self.early)
-        hg1 = self.p1.hilowgame_set.create(sent_at=self.early)
+        hg1 = self.p1.guessinggame_set.create(sent_at=self.early)
         self.assertEqual(3, self.td1.message_count())
         self.assertEqual(0, self.td1.message_count_for_bonus())
         es1.answered_at = self.quick_answer
@@ -858,7 +840,7 @@ class TaskDayTest(TestCase):
     def testQualifiesForBonus(self):
         es1 = self.p1.experiencesample_set.create(sent_at=self.early)
         gp1 = self.p1.gamepermission_set.create(sent_at=self.early)
-        hg1 = self.p1.hilowgame_set.create(sent_at=self.early)
+        hg1 = self.p1.guessinggame_set.create(sent_at=self.early)
         self.assertFalse(self.td1.qualifies_for_bonus())
         es1.answered_at = self.quick_answer
         es1.save()

@@ -245,7 +245,7 @@ class Participant(StampedModel):
         return nct
 
     def _game_guess_time(self, dt):
-        gg = self.hilowgame_set.newest()
+        gg = self.guessinggame_set.newest()
         nct = dt
         if gg.sent_at is not None:
             nct = dt + datetime.timedelta(minutes=4)
@@ -370,7 +370,7 @@ class Participant(StampedModel):
         """
         if not self.status == "game_post_sample":
             return
-        hlg = self.hilowgame_set.newest()
+        hlg = self.guessinggame_set.newest()
         if ((self.next_contact_time - hlg.result_reported_at).seconds <
             POST_SAMPLE_PERIOD_SEC):
             self.set_status('baseline')
@@ -393,7 +393,7 @@ class Participant(StampedModel):
             gp.get_message_mark_sent(dt))
 
     def _game_guess_send(self, dt, tropo_obj):
-        hlg = self.hilowgame_set.newest_if_unanswered()
+        hlg = self.guessinggame_set.newest_if_unanswered()
         foo = hlg.get_message_mark_sent(dt)
         tropo_obj.send_text_to(
             self,
@@ -409,7 +409,7 @@ class Participant(StampedModel):
         self.set_status('game_result')
 
     def _game_result_send(self, dt, tropo_obj):
-        hlg = self.hilowgame_set.newest()
+        hlg = self.guessinggame_set.newest()
         win_amount = self.experiment.game_value
         es = self.experiencesample_set.create(scheduled_at=dt)
         tropo_obj.send_texts_to(
@@ -420,7 +420,7 @@ class Participant(StampedModel):
         self.set_status('game_post_sample')
 
     def _game_post_sample_send(self, dt, tropo_obj):
-        hlg = self.hilowgame_set.newest()
+        hlg = self.guessinggame_set.newest()
         es = self.experiencesample_set.create(scheduled_at=dt)
         tropo_obj.send_text_to(
             self,
@@ -440,7 +440,7 @@ class Participant(StampedModel):
         gp.answer(message_text, cur_time)
         if gp.permissed:
             self.set_status('game_guess')
-            game = self.hilowgame_set.create(scheduled_at=cur_time)
+            game = self.guessinggame_set.create(scheduled_at=cur_time)
             tropo_obj.say_to(
                 self,
                 cur_time,
@@ -450,7 +450,7 @@ class Participant(StampedModel):
         return gp
 
     def _game_guess_incoming(self, message_text, cur_time, tropo_obj):
-        hlg = self.hilowgame_set.newest_if_unanswered()
+        hlg = self.guessinggame_set.newest_if_unanswered()
         hlg.answer(message_text, cur_time) # Raises an exception if this fails
         self.set_status('game_inter_sample')
         return hlg
@@ -471,7 +471,7 @@ class Participant(StampedModel):
         return [
             self.experiencesample_set,
             self.gamepermission_set,
-            self.hilowgame_set]
+            self.guessinggame_set]
 
     def newest_contact_objects(self):
         set_objects = [s.newest() for s in self.contact_sets]
@@ -562,7 +562,7 @@ class Participant(StampedModel):
         return len(self.task_days_for_bonus())
 
     def answered_games(self):
-        return self.hilowgame_set.filter(guessed_low__isnull=False)
+        return self.guessinggame_set.filter(guessed_red__isnull=False)
 
     def won_game_count(self):
         games = self.answered_games()
@@ -581,15 +581,10 @@ class Participant(StampedModel):
         return self.experiment.target_losses - self.lost_game_count()
 
     def should_win(self):
-        result = random.random() > 0.5
-        result_array = ([True] * self.remaining_target_wins() +
+        result_array = (
+            [True] * self.remaining_target_wins() +
             [False] * self.remaining_target_losses())
-        try:
-            result = random.choice(result_array)
-        except IndexError:
-            # This is OK, we're just out of samples
-            pass
-        return result
+        return random.choice(result_array)
 
     def game_payout(self):
         return self.experiment.game_value*self.won_game_count()
@@ -640,10 +635,10 @@ class Experiment(StampedModel):
 
     day_count = models.IntegerField(
         "Total task days",
-        default=7)
+        default=10)
 
     game_count = models.IntegerField(
-        default=5)
+        default=10)
 
     max_messages_per_day = models.IntegerField(
         default=35)
@@ -861,13 +856,13 @@ class GamePermission(ParticipantExchange):
             self.save()
 
 
-class HiLowGame(ParticipantExchange):
+class GuessingGame(ParticipantExchange):
 
-    correct_guess = models.IntegerField(
+    red_correct = models.NullBooleanField(
         blank=True,
         null=True)
 
-    guessed_low = models.NullBooleanField(
+    guessed_red = models.NullBooleanField(
         blank=True,
         null=True)
 
@@ -877,28 +872,24 @@ class HiLowGame(ParticipantExchange):
 
     def answer(self, text, answered_at, skip_save=False):
         """
-        Allow any text that has a h or l in it.
+        Allow any text that has 'r' or 'b'
         """
         matches = re.match(
             r"""
-            [^hl]*
-            (?P<hilow_char>[hl])
-            [^hl]*
+            [^rb]*
+            (?P<guess_char>[rb])
+            [^rb]*
             """, text, (re.I | re.VERBOSE))
         try:
-            match = matches.group("hilow_char").lower()
-            self.guessed_low = (match == "l")
+            match = matches.group("guess_char").lower()
+            self.guessed_red = (match == "r")
         except:
-            raise ResponseError("We didn't understand your repsonse. Please enter low or high.")
+            raise ResponseError("We didn't understand your repsonse. Please enter red or black.")
 
-        should_win = self.participant.should_win()
-        make_low_number = (
-            (should_win and self.guessed_low) or
-            (not should_win and not self.guessed_low))
-        if make_low_number:
-            self.correct_guess = random.randint(1, 4)
+        if self.participant.should_win():
+            self.red_correct = self.guessed_red
         else:
-            self.correct_guess = random.randint(6, 9)
+            self.red_correct = not self.guessed_red
 
         self.answered_at = answered_at
         if not skip_save:
@@ -908,18 +899,17 @@ class HiLowGame(ParticipantExchange):
         self.mark_sent(dt, True)
         if not skip_save:
             self.save()
-        return "We generated a number between 1 and 9. Guess if it's lower or higher than 5. (low/high)"
+        return "A random card is being selected from a full deck of cards. Guess whether the card will be red or black."
 
     @property
     def guess_was_correct(self):
-        is_low = self.correct_guess < 5
-        return (is_low == self.guessed_low)
+        return (self.red_correct == self.guessed_red)
 
     def get_result_message_mark_sent(self, dt, win_dollars, skip_save=False):
         if self.guess_was_correct:
-            msg = "The number was %s. You guessed right! $%s has been added to your account." % (self.correct_guess, win_dollars)
+            msg = "You won $20 for %(message)s" % {'message': '<MESSAGE>'}
         else:
-            msg = "The number was %s. You guessed wrong. No additional money has been added to your account." % self.correct_guess
+            msg = "You didn't win for %(message)s" % {'message': '<MESSAGE>'}
         self.result_reported_at = dt
         if not skip_save:
             self.save()
@@ -1050,7 +1040,7 @@ class TaskDay(StampedModel):
         sets = [
             self.experiencesample_set,
             self.gamepermission_set,
-            self.hilowgame_set]
+            self.guessinggame_set]
         lists = [s.all() for s in sets]
         return [item for sublist in lists for item in sublist]
 
@@ -1090,9 +1080,9 @@ class TaskDay(StampedModel):
             self.participant.gamepermission_set)
 
     @property
-    def hilowgame_set(self):
+    def guessinggame_set(self):
         return self._participantexchange_set(
-            self.participant.hilowgame_set)
+            self.participant.guessinggame_set)
 
     def __set_contact_fields(self):
         self.earliest_contact = datetime.datetime(
