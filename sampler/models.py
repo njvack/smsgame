@@ -701,6 +701,26 @@ class ResponseError(ValueError):
     pass
 
 
+class Target(StampedModel):
+
+    experiment = models.ForeignKey("Experiment")
+
+    external_id = models.CharField(max_length=100)
+
+    message = models.CharField(max_length=140)
+
+    class Meta:
+
+        unique_together = ('experiment', 'external_id')
+
+
+class Pairing(StampedModel):
+
+    target = models.ForeignKey("Target")
+
+    participant = models.ForeignKey("Participant")
+
+
 class ParticipantExchangeManager(models.Manager):
 
     def active(self):
