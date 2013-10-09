@@ -123,7 +123,8 @@ class PhoneNumberField(models.CharField):
         return PhoneNumber(str(value))
 
     def get_prep_value(self, value):
-        return value.cleaned
+        return PhoneNumber(str(value)).cleaned
+
 
 from south.modelsinspector import add_introspection_rules
 add_introspection_rules([], ["^sampler\.models\.PhoneNumberField"])
