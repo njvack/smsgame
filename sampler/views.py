@@ -85,6 +85,27 @@ def add_target(request, slug):
         return HttpResponse("Already exists", status=409)
 
 
+def add_participant(request, slug):
+    experiment = get_object_or_404(models.Experiment, url_slug=slug)
+    start_date = datetime.datetime.strptime(
+        request.REQUEST['start_date'],
+        "%Y-%m-%d").date()
+    #ppt, created = experiment.participant_set.get_or_create(
+    ppt, created = experiment.participant_set.get_or_create(
+        phone_number=request.REQUEST['phone_number'],
+        defaults={
+            'start_date': start_date}
+        )
+    if created:
+        target_ids = [
+            t.strip() for t in
+            request.REQUEST['target_list'].split(',')]
+        ppt.assign_pairings(target_ids)
+        return HttpResponse("Created", status=201)
+    else:
+        return HttpResponse("Already exists", status=409)
+
+
 def experiencesamples_csv(request, slug):
     experiment = get_object_or_404(models.Experiment, url_slug=slug)
 

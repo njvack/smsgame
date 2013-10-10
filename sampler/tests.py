@@ -34,6 +34,34 @@ class TargetViewTest(TestCase):
         self.assertEqual(409, response.status_code)
 
 
+class ParticipantViewTest(TestCase):
+
+    def setUp(self):
+        self.exp = models.Experiment.objects.create(
+            url_slug="test",
+            min_pct_answered_for_bonus=50,
+            target_wins=2,
+            target_losses=2)
+        self.target_count = 4
+        for i in range(self.target_count):
+            self.exp.target_set.create(
+                external_id=i,
+                message='Message for %s' % i)
+
+    def testCreatingParticipant(self):
+        c = Client()
+        target_list = ",".join([str(i) for i in range(self.target_count)])
+        response = c.post(
+            "/experiments/%s/add_participant" % self.exp.url_slug,
+            {
+                'phone_number': '6085551212',
+                'start_date': '2013-10-01',
+                'target_list': target_list})
+        assert_code(response, 201)
+        ppt = self.exp.participant_set.all()[0]
+        assert_equal(self.target_count, ppt.pairing_set.count())
+
+
 class ParticipantTest(TestCase):
 
     def setUp(self):
