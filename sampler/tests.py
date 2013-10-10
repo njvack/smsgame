@@ -90,6 +90,8 @@ class ParticipantTest(TestCase):
             p1.assign_pairings([0,1,2,'cat'])
         p1.assign_pairings([0,1,2,3])
         assert_equal(4, p1.pairing_set.count())
+        p1.assign_pairings(['0', '1', '2', '3'])
+        assert_equal(4, p1.pairing_set.count())
 
     def testGenOrUpdateStatusBaseline(self):
         self.p1.status = 'baseline'
