@@ -124,6 +124,21 @@ class ParticipantTest(TestCase):
         p1.assign_pairings(['0', '1', '2', '3'])
         assert_equal(4, p1.pairing_set.count())
 
+    def testGetUnusedPairings(self):
+        p1 = self.p1
+        p1.assign_pairings([0,1,2,3])
+        assert_equal(4, p1.unused_pairings().count())
+        gg = p1.guessinggame_set.create()
+        pairing = p1.pairing_set.all()[0]
+        pairing.guessing_game = gg
+        pairing.save()
+        assert_equal(3, p1.unused_pairings().count())
+
+    def testRandomUnusedPairing(self):
+        p1 = self.p1
+        p1.assign_pairings([0,1,2,3])
+        assert_is_not_none(p1.random_unused_pairing())
+
     def testGenOrUpdateStatusBaseline(self):
         self.p1.status = 'baseline'
         self.p1.next_contact_time = self.td_start

@@ -220,7 +220,6 @@ class Participant(StampedModel):
                 target=self.experiment.target_set.get(
                     external_id=external_id))
 
-
     def assign_task_days(self, num):
         self.taskday_set.all().delete()
         for i in range(num):
@@ -240,6 +239,12 @@ class Participant(StampedModel):
         return random.sample(
             range(self.experiment.day_count),
             self.experiment.game_count)
+
+    def unused_pairings(self):
+        return self.pairing_set.filter(guessing_game__isnull=True)
+
+    def random_unused_pairing(self):
+        return self.unused_pairings.order_by("?")[0]
 
     def _sleeping_contact_time(self, dt):
         delta = datetime.timedelta(minutes=random.randint(
@@ -739,6 +744,10 @@ class Pairing(StampedModel):
     target = models.ForeignKey("Target")
 
     participant = models.ForeignKey("Participant")
+
+    guessing_game = models.ForeignKey("GuessingGame",
+        blank=True,
+        null=True)
 
 
 class ParticipantExchangeManager(models.Manager):
