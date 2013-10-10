@@ -222,12 +222,10 @@ class Participant(StampedModel):
 
 
     def assign_task_days(self, num):
+        self.taskday_set.all().delete()
         for i in range(num):
             tdelta = datetime.timedelta(i)
-            task = TaskDay(
-                participant=self,
-                task_day=self.start_date+tdelta)
-            task.save()
+            task = self.taskday_set.create(task_day=self.start_date+tdelta)
 
     def assign_game_days(self, day_numbers):
         # First, clear the existing days...

@@ -101,6 +101,8 @@ def add_participant(request, slug):
             t.strip() for t in
             request.REQUEST['target_list'].split(',')]
         ppt.assign_pairings(target_ids)
+        ppt.assign_task_days(len(target_ids))
+        ppt.assign_game_days(range(len(target_ids)))
         return HttpResponse("Created", status=201)
     else:
         return HttpResponse("Already exists", status=409)

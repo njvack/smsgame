@@ -41,7 +41,9 @@ class ParticipantViewTest(TestCase):
             url_slug="test",
             min_pct_answered_for_bonus=50,
             target_wins=2,
-            target_losses=2)
+            target_losses=2,
+            game_count=4,
+            day_count=4)
         self.target_count = 4
         for i in range(self.target_count):
             self.exp.target_set.create(
@@ -60,6 +62,7 @@ class ParticipantViewTest(TestCase):
         assert_code(response, 201)
         ppt = self.exp.participant_set.all()[0]
         assert_equal(self.target_count, ppt.pairing_set.count())
+        assert_equal(self.exp.day_count, ppt.taskday_set.count())
 
 
 class ParticipantTest(TestCase):
