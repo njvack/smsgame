@@ -1,3 +1,4 @@
+from django_nose.tools import *
 from django.test import TestCase, Client
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
@@ -61,11 +62,34 @@ class ParticipantTest(TestCase):
             start_time=self.td2_start.time(),
             end_time=self.td2_end.time())
 
+        # For assign_pairings
+        self.target_count = 5
+        for i in range(self.target_count):
+            self.exp.target_set.create(
+                external_id=i,
+                message='Message for %s' % i)
+
     def testPptDoesntAllowCrazyStatus(self):
         p1 = self.p1
         p1.status = "crazy"
         with self.assertRaises(ValidationError):
             p1.save()
+
+    def testAssigningPairings(self):
+        p1 = self.p1
+        # length must equal experiemnt.target_wins + experiment.target_losses
+        with assert_raises(TypeError):
+            p1.assign_pairings("cats")
+        with assert_raises(TypeError):
+            p1.assign_pairings(0)
+        with assert_raises(ValueError):
+            p1.assign_pairings([0,1,2])
+        with assert_raises(ValueError):
+            p1.assign_pairings([0,1,2,3,4])
+        with assert_raises(models.Target.DoesNotExist):
+            p1.assign_pairings([0,1,2,'cat'])
+        p1.assign_pairings([0,1,2,3])
+        assert_equal(4, p1.pairing_set.count())
 
     def testGenOrUpdateStatusBaseline(self):
         self.p1.status = 'baseline'

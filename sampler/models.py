@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 
 import datetime
@@ -27,6 +27,10 @@ GAME_RUN_DELTA = datetime.timedelta(
     minutes=MIN_NEEDED_TO_SCHEDULE_GAME-MIN_WAIT_FOR_GAME_PERMISSION)
 GAME_SCHEDULE_DELTA = datetime.timedelta(
     minutes=MIN_NEEDED_TO_SCHEDULE_GAME)
+
+
+def is_non_string_iterable(obj):
+    return hasattr(obj, '__iter__') and not hasattr(obj, 'slice')
 
 
 class PhoneNumber(object):
@@ -199,6 +203,23 @@ class Participant(StampedModel):
         return (
             (not self.stopped) and
             (text_count < self.experiment.max_messages_per_day))
+
+
+    @transaction.commit_on_success
+    def assign_pairings(self, target_external_id_list):
+        if not is_non_string_iterable(target_external_id_list):
+            raise TypeError("List of IDs expected")
+        needed_length = (
+            self.experiment.target_wins +
+            self.experiment.target_losses)
+        if not len(target_external_id_list) == needed_length:
+            raise ValueError("List must be %s elements long" % needed_length)
+        self.pairing_set.all().delete()
+        for external_id in target_external_id_list:
+            self.pairing_set.create(
+                target=self.experiment.target_set.get(
+                    external_id=external_id))
+
 
     def assign_task_days(self, num):
         for i in range(num):
