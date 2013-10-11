@@ -280,6 +280,7 @@ class ParticipantTest(TestCase):
 
     def testAnswerChangesToGameIntersample(self):
         p = self.p1
+        p.assign_pairings([0,1,2,3])
         t = mocks.Tropo()
         p.status = 'game_guess'
         p.guessinggame_set.create(scheduled_at=self.early)
@@ -339,10 +340,16 @@ class ParticipantTest(TestCase):
 
     def testSendingChangesStatusFromResultToPostSample(self):
         p = self.p1
+        p.assign_pairings(range(4))
         p.status = "game_result"
         t = mocks.Tropo()
         p.next_contact_time=self.early
-        p.guessinggame_set.create(scheduled_at=self.early)
+        gg = p.guessinggame_set.create(
+            red_correct=True,
+            guessed_red=True,
+            scheduled_at=self.early)
+        pairing = p.pairing_set.all()[0]
+        gg.pairing_set.add(pairing)
         p.tropo_send_message(self.early, t, True)
         self.assertEqual('game_post_sample', p.status)
         self.assertIsNotNone(p.guessinggame_set.newest().result_reported_at)
@@ -682,6 +689,12 @@ class GuessingGameTest(TestCase):
             phone_number='6085551212')
         self.now = datetime.datetime(2011, 7, 1, 9, 30)
         self.gg = models.GuessingGame(participant=self.p1)
+        self.target_count = 2
+        for i in range(self.target_count):
+            self.exp.target_set.create(
+                external_id=i,
+                message='Message for %s' % i)
+        self.p1.assign_pairings(range(self.target_count))
 
     def testAnswerWithNumber(self):
         gg = self.gg

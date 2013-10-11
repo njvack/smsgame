@@ -244,7 +244,7 @@ class Participant(StampedModel):
         return self.pairing_set.filter(guessing_game__isnull=True)
 
     def random_unused_pairing(self):
-        return self.unused_pairings.order_by("?")[0]
+        return self.unused_pairings().order_by("?")[0]
 
     def _sleeping_contact_time(self, dt):
         delta = datetime.timedelta(minutes=random.randint(
@@ -802,6 +802,10 @@ class ParticipantExchange(StampedModel):
         null=True,
         blank=True)
 
+    @property
+    def experiment(self):
+        return self.participant.experiment
+
     def mark_sent(self, recorded_time, skip_save=False):
         self.sent_at = recorded_time
         self.participant_status_when_sent = self.participant.status
@@ -940,6 +944,9 @@ class GuessingGame(ParticipantExchange):
         else:
             self.red_correct = not self.guessed_red
 
+        pairing = self.participant.random_unused_pairing()
+        self.pairing_set.add(self.participant.random_unused_pairing())
+
         self.answered_at = answered_at
         if not skip_save:
             self.save()
@@ -951,14 +958,26 @@ class GuessingGame(ParticipantExchange):
         return "A random card is being selected from a full deck of cards. Guess whether the card will be red or black."
 
     @property
+    def pairing(self):
+        return self.pairing_set.all()[0]
+
+    @property
+    def paired_target(self):
+        return self.pairing.target
+
+    @property
     def guess_was_correct(self):
         return (self.red_correct == self.guessed_red)
 
     def get_result_message_mark_sent(self, dt, win_dollars, skip_save=False):
+        message = self.paired_target.message
+
         if self.guess_was_correct:
-            msg = "You won $20 for %(message)s" % {'message': '<MESSAGE>'}
+            msg = "You won $%(amount)s for %(message)s" % {
+                'amount': int(self.experiment.game_value),
+                'message': message}
         else:
-            msg = "You didn't win for %(message)s" % {'message': '<MESSAGE>'}
+            msg = "You didn't win for %(message)s" % {'message': message}
         self.result_reported_at = dt
         if not skip_save:
             self.save()
