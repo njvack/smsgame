@@ -88,7 +88,8 @@ class ExperienceSampleAdmin(ParticipantExchangeAdmin):
 
     list_display = (
         'participant', 'scheduled_at', 'sent_at', 'answered_at',
-        'positive_emotion', 'negative_emotion')
+        'positive_you', 'negative_you',
+        'positive_other', 'negative_other')
 
 
 class GamePermissionAdmin(ParticipantExchangeAdmin):
