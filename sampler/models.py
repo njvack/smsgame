@@ -734,6 +734,10 @@ class Target(StampedModel):
 
     message = models.CharField(max_length=140)
 
+    def __unicode__(self):
+        return "Target %s: External ID %s: %s" % (
+            self.pk, self.external_id, self.message)
+
     class Meta:
 
         unique_together = ('experiment', 'external_id')
