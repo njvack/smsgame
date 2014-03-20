@@ -206,7 +206,7 @@ class ParticipantTest(TestCase):
         p.gamepermission_set.create(scheduled_at=self.td_start)
         es = p.experiencesample_set.create(scheduled_at=self.early)
         p.status = "baseline"
-        p.tropo_answer("19", self.early, t)
+        p.tropo_answer("1 2 3 4", self.early, t)
         es = p.experiencesample_set.get(pk=es.pk)
         self.assertEqual(0, t.things_said)
         self.assertIsNotNone(es.answered_at)
@@ -217,21 +217,21 @@ class ParticipantTest(TestCase):
 
         p.status = "baseline"
         es = p.experiencesample_set.create(scheduled_at=self.early)
-        p.tropo_answer("19", self.early, t)
+        p.tropo_answer("1 2 3 4", self.early, t)
         es = p.experiencesample_set.get(pk=es.pk)
         self.assertIsNotNone(es.answered_at)
 
         p.status = "game_inter_sample"
         p.experiencesample_set.all().delete()
         es = p.experiencesample_set.create(scheduled_at=self.early)
-        p.tropo_answer("19", self.early, t)
+        p.tropo_answer("1 2 3 4", self.early, t)
         es = p.experiencesample_set.get(pk=es.pk)
         self.assertIsNotNone(es.answered_at)
 
         p.status = "game_post_sample"
         p.experiencesample_set.all().delete()
         es = p.experiencesample_set.create(scheduled_at=self.early)
-        p.tropo_answer("19", self.early, t)
+        p.tropo_answer("1 2 3 4", self.early, t)
         es = p.experiencesample_set.get(pk=es.pk)
         self.assertIsNotNone(es.answered_at)
 
@@ -296,7 +296,7 @@ class ParticipantTest(TestCase):
     def testAnswerWithIncomingTextObject(self):
         p = self.p1
         t = mocks.Tropo()
-        msg = models.IncomingTextMessage(message_text="19")
+        msg = models.IncomingTextMessage(message_text="1 2 3 4")
         p.status = "baseline"
         es = p.experiencesample_set.create(scheduled_at=self.early)
         p.tropo_answer(msg, self.early, t, True)
@@ -584,25 +584,25 @@ class ExperienceSampleTest(TestCase):
         self.es = self.p1.experiencesample_set.create(scheduled_at=self.now)
 
     def testAnswerSetsAnsweredAt(self):
-        self.es.answer("15", self.later, True)
+        self.es.answer("1 2 3 4", self.later, True)
         self.assertEqual(self.later, self.es.answered_at)
 
     def testAnswerGoodSetsPosNeg(self):
-        corr = ('1', '5')
-        self.es.answer("15", self.later, True)
+        corr = ('1', '2', '3', '4')
+        self.es.answer("1 2 3 4", self.later, True)
         self.assertEqual(corr, self.es.val_tuple)
-        self.es.answer("1 5", self.later, True)
+        self.es.answer("1,2,3,4", self.later, True)
         self.assertEqual(corr, self.es.val_tuple)
-        self.es.answer(" 1 5 ", self.later, True)
+        self.es.answer(" 1 2 3 4 ", self.later, True)
         self.assertEqual(corr, self.es.val_tuple)
-        self.es.answer("asd1asdas5asdas", self.later, True)
+        self.es.answer("a1a2a3a4a", self.later, True)
         self.assertEqual(corr, self.es.val_tuple)
 
     def testAnswerFailuresRaiseError(self):
         err = models.ResponseError
         self.assertRaises(err, self.es.answer, "", self.later, True)
-        self.assertRaises(err, self.es.answer, "123", self.later, True)
-        self.assertRaises(err, self.es.answer, "1", self.later, True)
+        self.assertRaises(err, self.es.answer, "1 2 3", self.later, True)
+        self.assertRaises(err, self.es.answer, "500 20 1 30", self.later, True)
         self.assertRaises(err, self.es.answer, "a", self.later, True)
 
     def testDeletedAtExcludesFromNewest(self):

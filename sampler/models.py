@@ -833,11 +833,19 @@ class ParticipantExchange(StampedModel):
 
 class ExperienceSample(ParticipantExchange):
 
-    positive_emotion = models.IntegerField(
+    positive_you = models.IntegerField(
         null=True,
         blank=True)
 
-    negative_emotion = models.IntegerField(
+    negative_you = models.IntegerField(
+        null=True,
+        blank=True)
+
+    positive_other = models.IntegerField(
+        null=True,
+        blank=True)
+
+    negative_other = models.IntegerField(
         null=True,
         blank=True)
 
@@ -848,20 +856,26 @@ class ExperienceSample(ParticipantExchange):
         negative_emotion, and yeah.
         """
         parse_re = re.compile(
-                r"""
-                ^[^1-9]*
-                (?P<positive_emotion>[1-9])
-                [^1-9]*
-                (?P<negative_emotion>[1-9])
-                [^1-9]*$""",
+            r"""
+            ^
+            [^0-9]*
+            (?P<positive_you>[0-9]{1,2})
+            [^0-9]+
+            (?P<negative_you>[0-9]{1,2})
+            [^0-9]+
+            (?P<positive_other>[0-9]{1,2})
+            [^0-9]+
+            (?P<negative_other>[0-9]{1,2})""",
             re.VERBOSE)
 
         try:
             matches = parse_re.match(text)
-            self.positive_emotion = matches.group('positive_emotion')
-            self.negative_emotion = matches.group('negative_emotion')
-        except Exception as exc:
-            raise ResponseError("We didn't understand your response. Please enter two numbers between 1 and 9.")
+            self.positive_you = matches.group('positive_you')
+            self.negative_you = matches.group('negative_you')
+            self.positive_other = matches.group('positive_other')
+            self.negative_other = matches.group('negative_other')
+        except Exception:
+            raise ResponseError("We didn't understand your response. Please enter four numbers between 0 and 99.")
 
         self.answered_at = answered_at
         if not skip_save:
@@ -869,16 +883,18 @@ class ExperienceSample(ParticipantExchange):
 
     @property
     def val_tuple(self):
-        return (self.positive_emotion, self.negative_emotion)
+        return (
+            self.positive_you, self.negative_you,
+            self.positive_other, self.negative_other)
 
     def __str__(self):
-        return "%s %s" % (self.positive_emotion, self.negative_emotion)
+        return "%s" % (self.val_tuple)
 
     def get_message_mark_sent(self, dt, skip_save=False):
         self.mark_sent(dt, True)
         if not skip_save:
             self.save()
-        return "Enter how much positive emotion (1-9) and negative emotion (1-9) you are feeling right now."
+        return "1) Positive you? 2) Negative you? 3) Positive other? 4) Negative other?"
 
 
 class GamePermission(ParticipantExchange):
