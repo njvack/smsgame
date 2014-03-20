@@ -2,8 +2,11 @@ from django.contrib import admin
 from . import models
 
 
+class TargetInline(admin.TabularInline):
+    model = models.Target
+
+
 class ExperimentAdmin(admin.ModelAdmin):
-    pass
     fieldsets = (
         ("Basic setup", {'fields':
             ((
@@ -25,12 +28,15 @@ class ExperimentAdmin(admin.ModelAdmin):
                 ('bonus_value',
                 'min_pct_answered_for_bonus'), )}))
 
+    inlines = [TargetInline, ]
+
 
 class TaskDayInlineAdmin(admin.TabularInline):
     model = models.TaskDay
 
     readonly_fields = ('qualified_frac', )
-    fields = ('task_day', 'start_time', 'end_time', 'is_game_day',
+    fields = (
+        'task_day', 'start_time', 'end_time', 'is_game_day',
         'qualified_frac')
 
     extra = 0
@@ -95,9 +101,11 @@ class GamePermissionAdmin(ParticipantExchangeAdmin):
 class TaskDayAdmin(admin.ModelAdmin):
 
     ordering = ('task_day', )
-    list_display = ('__str__', 'participant', 'task_day', 'is_game_day',
+    list_display = (
+        '__str__', 'participant', 'task_day', 'is_game_day',
         'qualified_frac')
     list_filter = ('participant', )
+
 
 admin.site.register(models.Experiment, ExperimentAdmin)
 admin.site.register(models.Participant, ParticipantAdmin)
