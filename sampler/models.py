@@ -888,7 +888,7 @@ class ExperienceSample(ParticipantExchange):
             self.positive_other, self.negative_other)
 
     def __str__(self):
-        return "%s" % (self.val_tuple)
+        return str(self.val_tuple)
 
     def get_message_mark_sent(self, dt, skip_save=False):
         self.mark_sent(dt, True)
