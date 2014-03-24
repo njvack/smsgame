@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.db import transaction
+
 import logging
 logger = logging.getLogger("smsgame")
 
@@ -85,6 +87,7 @@ def add_target(request, slug):
         return HttpResponse("Already exists", status=409)
 
 
+@transaction.commit_on_success
 def add_participant(request, slug):
     experiment = get_object_or_404(models.Experiment, url_slug=slug)
     start_date = datetime.datetime.strptime(
