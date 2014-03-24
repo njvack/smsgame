@@ -204,9 +204,9 @@ class Participant(StampedModel):
             (not self.stopped) and
             (text_count < self.experiment.max_messages_per_day))
 
-
     @transaction.commit_on_success
     def assign_pairings(self, target_external_id_list):
+        logger.debug("Assigning pairings for: %s" % (target_external_id_list))
         if not is_non_string_iterable(target_external_id_list):
             raise TypeError("List of IDs expected")
         needed_length = (
@@ -216,9 +216,12 @@ class Participant(StampedModel):
             raise ValueError("List must be %s elements long" % needed_length)
         self.pairing_set.all().delete()
         for external_id in target_external_id_list:
+            logger.debug("Assigning %s" % external_id)
+            target = self.experiment.target_set.get(
+                external_id=external_id)
+            logger.debug("Found %s" % target)
             self.pairing_set.create(
-                target=self.experiment.target_set.get(
-                    external_id=external_id))
+                target=target)
 
     def assign_task_days(self, num):
         self.taskday_set.all().delete()
