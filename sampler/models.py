@@ -1068,10 +1068,10 @@ class TaskDay(StampedModel):
     task_day = models.DateField()
 
     start_time = models.TimeField(
-        default=datetime.time(8, 00))
+        default=datetime.time(8, 45))
 
     end_time = models.TimeField(
-        default=datetime.time(22, 00))
+        default=datetime.time(18, 15))
 
     earliest_contact = models.DateTimeField(
         editable=False)
